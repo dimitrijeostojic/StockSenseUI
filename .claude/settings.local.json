@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "mcp__claude_design__get_project",
+      "mcp__claude_design__list_files",
+      "mcp__claude_design__read_file",
+      "Bash(xargs grep -l \"User\")",
+      "Bash(xargs grep -l \"class Roles\\\\|namespace.*Constants\")",
+      "Bash(xargs grep -l \"class.*EntityCollectionResult\\\\|class.*Result\")",
+      "Read(//c/Users/DimitrijeOstojic/Desktop/Dimitrije/Privatno/StockSense/**)",
+      "Bash(dir -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(dir /s /b)",
+      "Bash(xargs -I {} basename {})",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)"
+    ]
+  }
+}
