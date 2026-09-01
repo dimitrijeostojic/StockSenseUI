@@ -4,6 +4,7 @@ import type { UserDto, AdminRegisterUserRequest } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { PageHeader, TableCard, ActionBtn, LoadingState, EmptyState, AddButton } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 function RoleBadge({ roles }: { roles: string[] }) {
   const isAdmin = roles.includes('Admin');
@@ -75,6 +76,7 @@ export function UsersPage() {
 
   const COLS = ['Name', 'Username', 'Email', 'Role', 'Actions'];
   const GRID = '1.4fr 1.2fr 1.8fr 0.7fr 0.6fr';
+  const isMobile = useIsMobile();
 
   return (
     <>
@@ -123,7 +125,7 @@ export function UsersPage() {
       />
 
       <TableCard>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 560 : undefined }}>
           {COLS.map((h, i) => (
             <div key={h} style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
           ))}
@@ -135,7 +137,7 @@ export function UsersPage() {
         {users.map(u => {
           const isAdmin = u.roles.includes('Admin');
           return (
-            <div key={u.userPublicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center' }}>
+            <div key={u.userPublicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 560 : undefined }}>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{u.firstName} {u.lastName}</div>
               <div style={{ fontSize: 13, color: '#52525b' }}>{u.username}</div>
               <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>

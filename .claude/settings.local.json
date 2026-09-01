@@ -14,7 +14,9 @@
       "Bash(dir /s /b)",
       "Bash(xargs -I {} basename {})",
       "Bash(dotnet build *)",
-      "Bash(dotnet test *)"
+      "Bash(dotnet test *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)"
     ]
   }
 }

@@ -5,6 +5,7 @@ import type { CategoryDto, ProductDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { PageHeader, AddButton, LoadingState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface CategoryModalState {
   open: boolean;
@@ -22,6 +23,7 @@ export function CategoriesPage() {
   const [modal, setModal] = useState<CategoryModalState | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     const [cats, prods] = await Promise.all([getCategories(), getProducts()]);
@@ -77,7 +79,7 @@ export function CategoriesPage() {
 
       {loading && <LoadingState />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'repeat(3,1fr)', gap: 16 }}>
         {categories.map(c => (
           <div key={c.publicId} style={{ background: '#ffffff', border: '1px solid #ececf0', borderRadius: 16, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>

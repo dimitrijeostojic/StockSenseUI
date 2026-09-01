@@ -8,6 +8,7 @@ import { formatMoney } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const SWATCHES = ['#6d28d9', '#2563eb', '#16a34a', '#d97706', '#db2777', '#0891b2'];
 
@@ -180,6 +181,7 @@ export function ProductsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
   const pm = productModal;
   const sm = stockModal;
+  const isMobile = useIsMobile();
 
   return (
     <>
@@ -189,13 +191,13 @@ export function ProductsPage() {
         action={<AddButton onClick={openAdd} label="+ Add product" />}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isMobile ? '1 1 100%' : undefined }}>
           <input
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder="Search by name or description…"
-            style={{ height: 40, width: 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
+            style={{ height: 40, width: isMobile ? '100%' : 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
           />
           <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setQuery(q => ({ ...q, pageNumber: 1 })); }}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
@@ -203,7 +205,7 @@ export function ProductsPage() {
             {categories.map(c => <option key={c.publicId} value={c.name}>{c.name}</option>)}
           </select>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
             <option value="name">Sort: Name</option>
@@ -219,7 +221,7 @@ export function ProductsPage() {
       </div>
 
       <TableCard>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 1.3fr 0.8fr 0.7fr 1.5fr', padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 1.3fr 0.8fr 0.7fr 1.5fr', padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 12, minWidth: isMobile ? 660 : undefined }}>
           {sortBtn('Product', 'name')}
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Category</div>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Supplier</div>
@@ -237,7 +239,7 @@ export function ProductsPage() {
           const low = p.actualStockQuantity < p.minimumStockQuantity;
           const swatch = SWATCHES[idx % SWATCHES.length];
           return (
-            <div key={p.publicId} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 1.3fr 0.8fr 0.7fr 1.5fr', padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', gap: 12 }}>
+            <div key={p.publicId} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 1.3fr 0.8fr 0.7fr 1.5fr', padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', gap: 12, minWidth: isMobile ? 660 : undefined }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: swatch, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: 13 }}>
                   {p.name.charAt(0).toUpperCase()}

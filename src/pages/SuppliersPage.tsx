@@ -4,6 +4,7 @@ import type { SupplierDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface SupplierModalState {
   open: boolean;
@@ -107,6 +108,7 @@ export function SuppliersPage() {
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
+  const isMobile = useIsMobile();
   const GRID = '1.6fr 1.4fr 1.6fr 1.2fr 1fr';
 
   return (
@@ -117,14 +119,14 @@ export function SuppliersPage() {
         action={<AddButton onClick={openAdd} label="+ Add supplier" />}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
         <input
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
           placeholder="Search by name, contact or email…"
-          style={{ height: 40, width: 260, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
+          style={{ height: 40, width: isMobile ? '100%' : 260, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
         />
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
             <option value="name">Sort: Name</option>
@@ -139,7 +141,7 @@ export function SuppliersPage() {
       </div>
 
       <TableCard>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 580 : undefined }}>
           {sortBtn('Supplier', 'name')}
           {sortBtn('Contact', 'contactName')}
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Email</div>
@@ -153,7 +155,7 @@ export function SuppliersPage() {
         )}
 
         {suppliers.map(s => (
-          <div key={s.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center' }}>
+          <div key={s.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 580 : undefined }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{s.name}</div>
             <div style={{ fontSize: 13, color: '#52525b' }}>{s.contactName || '—'}</div>
             <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactEmail || '—'}</div>

@@ -8,6 +8,7 @@ import { formatDate, formatMoney } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, StatusBadge } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 type StatusFilter = '' | 'Pending' | 'Confirmed' | 'Received' | 'Cancelled';
 
@@ -97,6 +98,7 @@ export function OrdersPage() {
   }, [loading, location.state, products, suppliers]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
+  const isMobile = useIsMobile();
 
   const toggleSort = (field: string) => {
     setQuery(q => ({ ...q, sortBy: field, isAscending: q.sortBy === field ? !q.isAscending : true, pageNumber: 1 }));
@@ -225,13 +227,13 @@ export function OrdersPage() {
         action={<AddButton onClick={openAdd} label="+ New order" />}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isMobile ? '1 1 100%' : undefined }}>
           <input
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder="Search by supplier name…"
-            style={{ height: 40, width: 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
+            style={{ height: 40, width: isMobile ? '100%' : 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
           />
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as StatusFilter); setQuery(q => ({ ...q, pageNumber: 1 })); }}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
@@ -242,7 +244,7 @@ export function OrdersPage() {
             <option value="Cancelled">Cancelled</option>
           </select>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
             <option value="orderDate">Sort: Date</option>
@@ -257,7 +259,7 @@ export function OrdersPage() {
       </div>
 
       <TableCard>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 660 : undefined }}>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Order</div>
           {sortBtn('Supplier', 'supplierName')}
           {sortBtn('Date', 'orderDate')}
@@ -276,7 +278,7 @@ export function OrdersPage() {
           const total = getTotal(detail);
 
           return (
-            <div key={o.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center' }}>
+            <div key={o.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 660 : undefined }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#71717a' }}>#{o.publicId.slice(0, 8)}</div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{o.supplierName}</div>
               <div style={{ fontSize: 13, color: '#52525b' }}>{formatDate(o.orderDate)}</div>

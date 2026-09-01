@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 type Mode = 'login' | 'register';
 
@@ -10,6 +11,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<Mode>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [regForm, setRegForm] = useState({
@@ -54,7 +56,7 @@ export function LoginPage() {
     }}>
       <div style={{
         width: 420, maxWidth: '92vw', background: '#ffffff', border: '1px solid #e4e4e7',
-        borderRadius: 20, boxShadow: '0 20px 50px -20px rgba(24,24,27,0.18)', padding: 40,
+        borderRadius: 20, boxShadow: '0 20px 50px -20px rgba(24,24,27,0.18)', padding: isMobile ? 24 : 40,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#6d28d9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -117,7 +119,7 @@ export function LoginPage() {
             <div style={{ fontSize: 13.5, color: '#71717a', marginBottom: 22 }}>Register your company to get started</div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                 {[
                   { label: 'First name', key: 'firstName', placeholder: 'John' },
                   { label: 'Last name', key: 'lastName', placeholder: 'Doe' },

@@ -4,11 +4,13 @@ import { getDashboard } from '../api/dashboard';
 import type { DashboardResponse } from '../types';
 import { formatDate } from '../types';
 import { PageHeader, LoadingState, StatusBadge } from '../components/Layout';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     getDashboard().then(setData).finally(() => setLoading(false));
@@ -24,13 +26,13 @@ export function DashboardPage() {
 
       {data && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18, marginBottom: 22 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 18, marginBottom: 22 }}>
             <KpiCard label="Total products" value={data.numberOfProducts} />
             <KpiCard label="Low stock items" value={data.lowStockProducts} valueColor="#dc2626" />
             <KpiCard label="Active orders" value={data.numOfActiveOrders} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', gap: 18, alignItems: 'start' }}>
             <div style={{ background: '#ffffff', border: '1px solid #ececf0', borderRadius: 16, overflow: 'hidden' }}>
               <div style={{ padding: '18px 22px', borderBottom: '1px solid #f1f0f4', fontSize: 15, fontWeight: 700, color: '#18181b' }}>Recent orders</div>
               {data.recentOrders.length === 0 && (
