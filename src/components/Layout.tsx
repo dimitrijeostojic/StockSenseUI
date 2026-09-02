@@ -1,11 +1,13 @@
 import { type ReactNode, useMemo, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage, type Lang } from '../contexts/LanguageContext';
 import { useIsMobile } from '../hooks/useIsMobile';
+import type { TranslationKey } from '../locales/en';
 
-const BASE_NAV_ITEMS = [
+const BASE_NAV_ITEMS: { to: string; labelKey: TranslationKey; icon: ReactNode }[] = [
   {
-    to: '/dashboard', label: 'Dashboard',
+    to: '/dashboard', labelKey: 'nav_dashboard',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18">
         <rect x="1" y="1" width="7" height="7" rx="2" fill="currentColor" opacity="0.9" />
@@ -16,7 +18,7 @@ const BASE_NAV_ITEMS = [
     ),
   },
   {
-    to: '/products', label: 'Products',
+    to: '/products', labelKey: 'nav_products',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18">
         <rect x="1.5" y="4.5" width="15" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -25,7 +27,7 @@ const BASE_NAV_ITEMS = [
     ),
   },
   {
-    to: '/categories', label: 'Categories',
+    to: '/categories', labelKey: 'nav_categories',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18">
         <rect x="1.5" y="2.5" width="15" height="3.4" rx="1.5" fill="currentColor" opacity="0.9" />
@@ -35,7 +37,7 @@ const BASE_NAV_ITEMS = [
     ),
   },
   {
-    to: '/suppliers', label: 'Suppliers',
+    to: '/suppliers', labelKey: 'nav_suppliers',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18">
         <rect x="1.5" y="1.5" width="15" height="15" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -47,7 +49,7 @@ const BASE_NAV_ITEMS = [
     ),
   },
   {
-    to: '/orders', label: 'Orders',
+    to: '/orders', labelKey: 'nav_orders',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18">
         <rect x="2.5" y="1.5" width="13" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -58,8 +60,8 @@ const BASE_NAV_ITEMS = [
   },
 ];
 
-const ADMIN_NAV_ITEM = {
-  to: '/users', label: 'Users',
+const ADMIN_NAV_ITEM: { to: string; labelKey: TranslationKey; icon: ReactNode } = {
+  to: '/users', labelKey: 'nav_users',
   icon: (
     <svg width="18" height="18" viewBox="0 0 18 18">
       <circle cx="9" cy="6" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -70,6 +72,7 @@ const ADMIN_NAV_ITEM = {
 
 export function Layout({ children }: { children: ReactNode }) {
   const { logout, user, isAdmin } = useAuth();
+  const { t, lang, setLang } = useLanguage();
   const navigate = useNavigate();
   const navItems = useMemo(() => isAdmin ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS, [isAdmin]);
   const isMobile = useIsMobile();
@@ -82,6 +85,19 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const closeSidebar = () => setSidebarOpen(false);
   const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'U';
+
+  const langBtn = (l: Lang, label: string) => (
+    <button
+      onClick={() => setLang(l)}
+      style={{
+        height: 28, padding: '0 10px', borderRadius: 7,
+        border: lang === l ? 'none' : '1px solid #e4e4e7',
+        background: lang === l ? '#6d28d9' : '#ffffff',
+        color: lang === l ? '#ffffff' : '#71717a',
+        fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+      }}
+    >{label}</button>
+  );
 
   const sidebar = (
     <div style={{
@@ -133,13 +149,19 @@ export function Layout({ children }: { children: ReactNode }) {
             })}
           >
             {item.icon}
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </NavLink>
         ))}
       </nav>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ height: 1, background: '#ececf0', margin: '6px 4px' }} />
+
+        <div style={{ display: 'flex', gap: 6, padding: '0 8px' }}>
+          {langBtn('en', 'EN')}
+          {langBtn('sr', 'SR')}
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8 }}>
           <div style={{
             width: 32, height: 32, borderRadius: '50%', background: '#f3eefe',
@@ -171,7 +193,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <line x1="10" y1="9" x2="16.5" y2="9" stroke="currentColor" strokeWidth="1.5" />
             <polyline points="13.5,6 16.5,9 13.5,12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Log out
+          {t('nav_logout')}
         </button>
       </div>
     </div>
@@ -317,7 +339,13 @@ export function ActionBtn({ children, onClick, variant = 'default', disabled }: 
 }
 
 export function StatusBadge({ statusNum }: { statusNum: number }) {
-  const labels: Record<number, string> = { 1: 'Pending', 2: 'Confirmed', 3: 'Received', 4: 'Cancelled' };
+  const { t } = useLanguage();
+  const labels: Record<number, string> = {
+    1: t('status_pending'),
+    2: t('status_confirmed'),
+    3: t('status_received'),
+    4: t('status_cancelled'),
+  };
   const colors: Record<number, { bg: string; color: string }> = {
     1: { bg: '#fef3e2', color: '#d97706' },
     2: { bg: '#eaf1fe', color: '#2563eb' },
@@ -336,9 +364,10 @@ export function StatusBadge({ statusNum }: { statusNum: number }) {
 }
 
 export function LoadingState() {
+  const { t } = useLanguage();
   return (
     <div style={{ padding: '60px 22px', textAlign: 'center', color: '#a1a1aa', fontSize: 13.5 }}>
-      Loading...
+      {t('loading')}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { getSuppliers } from '../api/suppliers';
 import type { OrderListDto, OrderDetailDto, ProductDto, SupplierDto } from '../types';
 import { formatDate, formatMoney } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, StatusBadge } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -41,6 +42,8 @@ interface Query {
 
 export function OrdersPage() {
   const { showToast } = useToast();
+  const { t, lang } = useLanguage();
+  const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
   const location = useLocation();
   const [orders, setOrders] = useState<OrderListDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -146,7 +149,7 @@ export function OrdersPage() {
 
   const saveOrder = async () => {
     if (!modal) return;
-    if (!modal.items.length) { showToast('Add at least one item'); return; }
+    if (!modal.items.length) { showToast(t('add_at_least_one')); return; }
     setSaving(true);
     try {
       await createOrder({
@@ -155,40 +158,40 @@ export function OrdersPage() {
         notes: modal.notes || undefined,
         orderItemsDto: modal.items.map(it => ({ productPublicId: it.productId, quantity: parseInt(it.quantity) || 1 })),
       });
-      showToast('Order created');
+      showToast(t('order_created'));
       setModal(null);
       setQuery(q => ({ ...q, pageNumber: 1 }));
     } catch {
-      showToast('Failed to create order');
+      showToast(t('order_create_failed'));
     } finally {
       setSaving(false);
     }
   };
 
-  const transition = async (publicId: string, status: number, label: string) => {
+  const transition = async (publicId: string, status: number, toastMsg: string) => {
     try {
       await updateOrderStatus(publicId, status);
-      showToast(`Order ${label.toLowerCase()}`);
+      showToast(toastMsg);
       await load();
       setOrderDetails(prev => { const next = { ...prev }; delete next[publicId]; return next; });
     } catch {
-      showToast(`Failed to update order`);
+      showToast(t('order_transition_failed'));
     }
   };
 
   const handleDelete = async (publicId: string) => {
     try {
       await deleteOrder(publicId);
-      showToast('Order deleted');
+      showToast(t('order_deleted'));
       await load();
     } catch {
-      showToast('Failed to delete order');
+      showToast(t('order_delete_failed'));
     }
   };
 
   const openEdit = async (o: OrderListDto) => {
     const detail = await getDetail(o.publicId);
-    if (!detail) { showToast('Failed to load order'); return; }
+    if (!detail) { showToast(t('order_load_failed')); return; }
     setEditModal({
       publicId: o.publicId,
       supplierId: detail.supplierPublicId,
@@ -206,12 +209,12 @@ export function OrdersPage() {
         orderDate: new Date(editModal.orderDate).toISOString(),
         notes: editModal.notes || undefined,
       });
-      showToast('Order updated');
+      showToast(t('order_updated'));
       setEditModal(null);
       setOrderDetails(prev => { const next = { ...prev }; delete next[editModal.publicId]; return next; });
       await load();
     } catch {
-      showToast('Failed to update order');
+      showToast(t('order_update_failed'));
     } finally {
       setSaving(false);
     }
@@ -230,9 +233,9 @@ export function OrdersPage() {
   return (
     <>
       <PageHeader
-        title="Orders"
-        subtitle="Purchase orders sent to suppliers"
-        action={<AddButton onClick={openAdd} label="+ New order" />}
+        title={t('nav_orders')}
+        subtitle={t('orders_subtitle')}
+        action={<AddButton onClick={openAdd} label={t('new_order')} />}
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
@@ -240,45 +243,45 @@ export function OrdersPage() {
           <input
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
-            placeholder="Search by supplier name…"
+            placeholder={t('search_orders')}
             style={{ height: 40, width: isMobile ? '100%' : 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
           />
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as StatusFilter); setQuery(q => ({ ...q, pageNumber: 1 })); }}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="">All statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Confirmed">Confirmed</option>
-            <option value="Received">Received</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="">{t('all_statuses')}</option>
+            <option value="Pending">{t('status_pending')}</option>
+            <option value="Confirmed">{t('status_confirmed')}</option>
+            <option value="Received">{t('status_received')}</option>
+            <option value="Cancelled">{t('status_cancelled')}</option>
           </select>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="orderDate">Sort: Date</option>
-            <option value="supplierName">Sort: Supplier</option>
+            <option value="orderDate">{t('sort_date')}</option>
+            <option value="supplierName">{t('sort_supplier_name')}</option>
           </select>
           <select value={query.isAscending ? 'asc' : 'desc'} onChange={e => setQuery(q => ({ ...q, isAscending: e.target.value === 'asc', pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
+            <option value="asc">{t('ascending')}</option>
+            <option value="desc">{t('descending')}</option>
           </select>
         </div>
       </div>
 
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 660 : undefined }}>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Order</div>
-          {sortBtn('Supplier', 'supplierName')}
-          {sortBtn('Date', 'orderDate')}
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Status</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>Actions</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_order')}</div>
+          {sortBtn(t('supplier'), 'supplierName')}
+          {sortBtn(t('date'), 'orderDate')}
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_total')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('status')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
         {!loading && orders.length === 0 && (
-          <EmptyState message={query.search || statusFilter ? 'No orders match your filters.' : 'No orders yet.'} />
+          <EmptyState message={query.search || statusFilter ? t('no_orders_filtered') : t('no_orders')} />
         )}
 
         {orders.map(o => {
@@ -294,18 +297,18 @@ export function OrdersPage() {
                 {total != null ? formatMoney(total) : (
                   <button onClick={async () => { await getDetail(o.publicId); }}
                     style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
-                    View
+                    {t('view')}
                   </button>
                 )}
               </div>
               <div><StatusBadge statusNum={o.orderStatus} /></div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <ActionBtn onClick={async () => { await getDetail(o.publicId); setDetailId(o.publicId); }}>Details</ActionBtn>
-                {o.orderStatus === 1 && <ActionBtn onClick={() => openEdit(o)}>Edit</ActionBtn>}
-                {o.orderStatus === 1 && <ActionBtn variant="blue" onClick={() => transition(o.publicId, 2, 'Confirmed')}>Confirm</ActionBtn>}
-                {o.orderStatus === 2 && <ActionBtn variant="green" onClick={() => transition(o.publicId, 3, 'Received')}>Receive</ActionBtn>}
-                {(o.orderStatus === 1 || o.orderStatus === 2) && <ActionBtn variant="danger" onClick={() => transition(o.publicId, 4, 'Cancelled')}>Cancel</ActionBtn>}
-                {o.orderStatus === 4 && <ActionBtn variant="danger" onClick={() => setConfirmId(o.publicId)}>Delete</ActionBtn>}
+                <ActionBtn onClick={async () => { await getDetail(o.publicId); setDetailId(o.publicId); }}>{t('btn_details')}</ActionBtn>
+                {o.orderStatus === 1 && <ActionBtn onClick={() => openEdit(o)}>{t('edit')}</ActionBtn>}
+                {o.orderStatus === 1 && <ActionBtn variant="blue" onClick={() => transition(o.publicId, 2, t('order_confirmed_toast'))}>{t('btn_confirm')}</ActionBtn>}
+                {o.orderStatus === 2 && <ActionBtn variant="green" onClick={() => transition(o.publicId, 3, t('order_received_toast'))}>{t('btn_receive')}</ActionBtn>}
+                {(o.orderStatus === 1 || o.orderStatus === 2) && <ActionBtn variant="danger" onClick={() => transition(o.publicId, 4, t('order_cancelled_toast'))}>{t('btn_cancel_order')}</ActionBtn>}
+                {o.orderStatus === 4 && <ActionBtn variant="danger" onClick={() => setConfirmId(o.publicId)}>{t('delete')}</ActionBtn>}
               </div>
             </div>
           );
@@ -314,28 +317,24 @@ export function OrdersPage() {
         {totalCount > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', borderTop: '1px solid #ececf0', background: '#fafafa' }}>
             <div style={{ fontSize: 13, color: '#71717a' }}>
-              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} of ${totalCount}`}
+              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} ${t('of')} ${totalCount}`}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <select value={query.pageSize} onChange={e => setQuery(q => ({ ...q, pageSize: Number(e.target.value), pageNumber: 1 }))}
                 style={{ height: 32, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 12.5, fontFamily: 'inherit', background: '#ffffff', color: '#3f3f46' }}>
-                <option value={5}>5 / page</option>
-                <option value={10}>10 / page</option>
-                <option value={25}>25 / page</option>
-                <option value={50}>50 / page</option>
-                <option value={100}>100 / page</option>
+                {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} {t('per_page')}</option>)}
               </select>
               <button
                 disabled={query.pageNumber <= 1}
                 onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber - 1 }))}
                 style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber <= 1 ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber <= 1 ? 'not-allowed' : 'pointer' }}
-              >← Prev</button>
-              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>Page {query.pageNumber} of {totalPages}</span>
+              >{t('prev')}</button>
+              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>{t('page')} {query.pageNumber} {t('of')} {totalPages}</span>
               <button
                 disabled={query.pageNumber >= totalPages}
                 onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber + 1 }))}
                 style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber >= totalPages ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber >= totalPages ? 'not-allowed' : 'pointer' }}
-              >Next →</button>
+              >{t('next')}</button>
             </div>
           </div>
         )}
@@ -345,31 +344,31 @@ export function OrdersPage() {
         open={!!confirmId}
         onClose={() => setConfirmId(null)}
         onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
-        title="Delete order"
-        message="This action cannot be undone."
+        title={t('delete_order')}
+        message={t('cannot_undo')}
       />
 
       {/* Edit Order Modal */}
       <Modal open={!!editModal} onClose={() => setEditModal(null)} width={460}>
         {editModal && (
           <>
-            <ModalTitle>Edit order</ModalTitle>
+            <ModalTitle>{t('edit_order_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Supplier">
+              <Field label={t('supplier')}>
                 <Select value={editModal.supplierId} onChange={e => setEditModal(prev => ({ ...prev!, supplierId: e.target.value }))}>
                   {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
                 </Select>
               </Field>
-              <Field label="Order date">
+              <Field label={t('order_date_field')}>
                 <Input type="date" value={editModal.orderDate} onChange={e => setEditModal(prev => ({ ...prev!, orderDate: e.target.value }))} />
               </Field>
-              <Field label="Notes">
+              <Field label={t('notes')}>
                 <Input placeholder="Optional note" value={editModal.notes} onChange={e => setEditModal(prev => ({ ...prev!, notes: e.target.value }))} />
               </Field>
             </div>
             <ModalActions>
-              <BtnSecondary onClick={() => setEditModal(null)}>Cancel</BtnSecondary>
-              <BtnPrimary onClick={saveEdit} disabled={saving}>Save changes</BtnPrimary>
+              <BtnSecondary onClick={() => setEditModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={saveEdit} disabled={saving}>{t('save_changes')}</BtnPrimary>
             </ModalActions>
           </>
         )}
@@ -383,28 +382,28 @@ export function OrdersPage() {
           <Modal open={!!detailId && !!detail} onClose={() => setDetailId(null)} width={560}>
             {detail && (
               <>
-                <ModalTitle>Order details</ModalTitle>
+                <ModalTitle>{t('order_details_title')}</ModalTitle>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
                   <div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 3 }}>Supplier</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 3 }}>{t('supplier')}</div>
                     <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{detail.supplierName}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 3 }}>Date</div>
-                    <div style={{ fontSize: 13.5, color: '#52525b' }}>{formatDate(detail.orderDate)}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 3 }}>{t('date')}</div>
+                    <div style={{ fontSize: 13.5, color: '#52525b' }}>{formatDate(detail.orderDate, locale)}</div>
                   </div>
                   {detail.notes && (
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 3 }}>Notes</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 3 }}>{t('notes')}</div>
                       <div style={{ fontSize: 13, color: '#52525b' }}>{detail.notes}</div>
                     </div>
                   )}
                 </div>
 
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>Items</div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{t('items_label')}</div>
                 <div style={{ border: '1px solid #ececf0', borderRadius: 10, overflow: 'hidden' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.6fr 0.8fr 0.8fr', padding: '9px 14px', background: '#fafafa', borderBottom: '1px solid #ececf0' }}>
-                    {['Product', 'Qty', 'Unit price', 'Total'].map((h, i) => (
+                    {[t('col_product'), t('col_qty'), t('col_unit_price'), t('col_total')].map((h, i) => (
                       <div key={h} style={{ fontSize: 11, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: i > 0 ? 'right' : 'left' }}>{h}</div>
                     ))}
                   </div>
@@ -419,12 +418,12 @@ export function OrdersPage() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 14, borderTop: '1px solid #ececf0' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>Order total</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>{t('order_total')}</div>
                   <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatMoney(total ?? 0)}</div>
                 </div>
 
                 <ModalActions>
-                  <BtnSecondary onClick={() => setDetailId(null)}>Close</BtnSecondary>
+                  <BtnSecondary onClick={() => setDetailId(null)}>{t('close')}</BtnSecondary>
                 </ModalActions>
               </>
             )}
@@ -436,19 +435,19 @@ export function OrdersPage() {
       <Modal open={!!modal} onClose={() => setModal(null)} width={560}>
         {modal && (
           <>
-            <ModalTitle>New purchase order</ModalTitle>
+            <ModalTitle>{t('new_order_title')}</ModalTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              <Field label="Supplier">
+              <Field label={t('supplier')}>
                 <Select value={modal.supplierId} onChange={e => setModal(prev => ({ ...prev!, supplierId: e.target.value }))}>
                   {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
                 </Select>
               </Field>
-              <Field label="Notes">
+              <Field label={t('notes')}>
                 <Input placeholder="Optional note" value={modal.notes} onChange={e => setModal(prev => ({ ...prev!, notes: e.target.value }))} />
               </Field>
             </div>
 
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>Items</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{t('items_label')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {modal.items.map((it, idx) => {
                 const prod = products.find(p => p.publicId === it.productId);
@@ -475,17 +474,17 @@ export function OrdersPage() {
 
             <button onClick={() => setModal(prev => ({ ...prev!, items: [...prev!.items, { productId: products[0]?.publicId ?? '', quantity: '1' }] }))}
               style={{ marginTop: 10, height: 36, padding: '0 14px', borderRadius: 8, border: '1px dashed #d4d4d8', background: '#ffffff', color: '#71717a', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-              + Add item
+              {t('add_item')}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, paddingTop: 14, borderTop: '1px solid #ececf0' }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>Order total</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>{t('order_total')}</div>
               <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatMoney(orderModalTotal())}</div>
             </div>
 
             <ModalActions>
-              <BtnSecondary onClick={() => setModal(null)}>Cancel</BtnSecondary>
-              <BtnPrimary onClick={saveOrder} disabled={saving}>Create order</BtnPrimary>
+              <BtnSecondary onClick={() => setModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={saveOrder} disabled={saving}>{t('create_order')}</BtnPrimary>
             </ModalActions>
           </>
         )}

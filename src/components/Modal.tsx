@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ModalProps {
   open: boolean;
@@ -121,7 +122,9 @@ interface ConfirmModalProps {
   loading?: boolean;
 }
 
-export function ConfirmModal({ open, onClose, onConfirm, title, message, confirmLabel = 'Delete', loading }: ConfirmModalProps) {
+export function ConfirmModal({ open, onClose, onConfirm, title, message, confirmLabel, loading }: ConfirmModalProps) {
+  const { t } = useLanguage();
+  const label = confirmLabel ?? t('delete');
   return (
     <Modal open={open} onClose={onClose} width={400}>
       <ModalTitle>{title}</ModalTitle>
@@ -129,9 +132,9 @@ export function ConfirmModal({ open, onClose, onConfirm, title, message, confirm
         <div style={{ fontSize: 13.5, color: '#52525b', marginBottom: 4 }}>{message}</div>
       )}
       <ModalActions>
-        <BtnSecondary onClick={onClose}>Cancel</BtnSecondary>
+        <BtnSecondary onClick={onClose}>{t('cancel')}</BtnSecondary>
         <BtnPrimary onClick={onConfirm} disabled={loading} style={{ background: loading ? '#a1a1aa' : '#dc2626' }}>
-          {loading ? 'Deleting…' : confirmLabel}
+          {loading ? t('deleting') : label}
         </BtnPrimary>
       </ModalActions>
     </Modal>

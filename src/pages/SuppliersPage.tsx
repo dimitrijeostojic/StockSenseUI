@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../api/suppliers';
 import type { SupplierDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -26,6 +27,7 @@ interface Query {
 
 export function SuppliersPage() {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -36,8 +38,8 @@ export function SuppliersPage() {
   const [searchInput, setSearchInput] = useState('');
 
   useEffect(() => {
-    const t = setTimeout(() => setQuery(q => ({ ...q, search: searchInput, pageNumber: 1 })), 400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setQuery(q => ({ ...q, search: searchInput, pageNumber: 1 })), 400);
+    return () => clearTimeout(timer);
   }, [searchInput]);
 
   const load = useCallback(async () => {
@@ -75,23 +77,23 @@ export function SuppliersPage() {
 
   const save = async () => {
     if (!modal) return;
-    if (!modal.name.trim()) { showToast('Supplier name is required'); return; }
+    if (!modal.name.trim()) { showToast(t('supplier_name_required')); return; }
     setSaving(true);
     try {
       const body = { name: modal.name, contactName: modal.contactName || undefined, contactEmail: modal.contactEmail || undefined, contactPhone: modal.contactPhone || undefined };
       if (modal.mode === 'add') {
         await createSupplier(body);
-        showToast('Supplier added');
+        showToast(t('supplier_added'));
         setModal(null);
         setQuery(q => ({ ...q, pageNumber: 1 }));
       } else {
         await updateSupplier(modal.publicId!, body);
-        showToast('Supplier updated');
+        showToast(t('supplier_updated'));
         setModal(null);
         await load();
       }
     } catch {
-      showToast('Failed to save supplier');
+      showToast(t('supplier_save_failed'));
     } finally {
       setSaving(false);
     }
@@ -100,10 +102,10 @@ export function SuppliersPage() {
   const handleDelete = async (publicId: string) => {
     try {
       await deleteSupplier(publicId);
-      showToast('Supplier deleted');
+      showToast(t('supplier_deleted'));
       await load();
     } catch {
-      showToast('Failed to delete supplier');
+      showToast(t('supplier_delete_failed'));
     }
   };
 
@@ -114,44 +116,44 @@ export function SuppliersPage() {
   return (
     <>
       <PageHeader
-        title="Suppliers"
-        subtitle="Vendors you purchase inventory from"
-        action={<AddButton onClick={openAdd} label="+ Add supplier" />}
+        title={t('nav_suppliers')}
+        subtitle={t('suppliers_subtitle')}
+        action={<AddButton onClick={openAdd} label={t('add_supplier')} />}
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
         <input
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
-          placeholder="Search by name, contact or email…"
+          placeholder={t('search_suppliers')}
           style={{ height: 40, width: isMobile ? '100%' : 260, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
         />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="name">Sort: Name</option>
-            <option value="contactName">Sort: Contact</option>
+            <option value="name">{t('sort_name')}</option>
+            <option value="contactName">{t('sort_contact')}</option>
           </select>
           <select value={query.isAscending ? 'asc' : 'desc'} onChange={e => setQuery(q => ({ ...q, isAscending: e.target.value === 'asc', pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
+            <option value="asc">{t('ascending')}</option>
+            <option value="desc">{t('descending')}</option>
           </select>
         </div>
       </div>
 
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 580 : undefined }}>
-          {sortBtn('Supplier', 'name')}
-          {sortBtn('Contact', 'contactName')}
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Email</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Phone</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>Actions</div>
+          {sortBtn(t('supplier'), 'name')}
+          {sortBtn(t('col_contact'), 'contactName')}
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('email')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('phone')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
         {!loading && suppliers.length === 0 && (
-          <EmptyState message={query.search ? 'No suppliers match your search.' : 'No suppliers yet.'} />
+          <EmptyState message={query.search ? t('no_suppliers_filtered') : t('no_suppliers')} />
         )}
 
         {suppliers.map(s => (
@@ -161,8 +163,8 @@ export function SuppliersPage() {
             <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactEmail || '—'}</div>
             <div style={{ fontSize: 13, color: '#52525b' }}>{s.contactPhone || '—'}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <ActionBtn onClick={() => openEdit(s)}>Edit</ActionBtn>
-              <ActionBtn variant="danger" onClick={() => setConfirmId(s.publicId)}>Delete</ActionBtn>
+              <ActionBtn onClick={() => openEdit(s)}>{t('edit')}</ActionBtn>
+              <ActionBtn variant="danger" onClick={() => setConfirmId(s.publicId)}>{t('delete')}</ActionBtn>
             </div>
           </div>
         ))}
@@ -170,28 +172,24 @@ export function SuppliersPage() {
         {totalCount > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', borderTop: '1px solid #ececf0', background: '#fafafa' }}>
             <div style={{ fontSize: 13, color: '#71717a' }}>
-              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} of ${totalCount}`}
+              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} ${t('of')} ${totalCount}`}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <select value={query.pageSize} onChange={e => setQuery(q => ({ ...q, pageSize: Number(e.target.value), pageNumber: 1 }))}
                 style={{ height: 32, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 12.5, fontFamily: 'inherit', background: '#ffffff', color: '#3f3f46' }}>
-                <option value={5}>5 / page</option>
-                <option value={10}>10 / page</option>
-                <option value={25}>25 / page</option>
-                <option value={50}>50 / page</option>
-                <option value={100}>100 / page</option>
+                {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} {t('per_page')}</option>)}
               </select>
               <button
                 disabled={query.pageNumber <= 1}
                 onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber - 1 }))}
                 style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber <= 1 ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber <= 1 ? 'not-allowed' : 'pointer' }}
-              >← Prev</button>
-              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>Page {query.pageNumber} of {totalPages}</span>
+              >{t('prev')}</button>
+              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>{t('page')} {query.pageNumber} {t('of')} {totalPages}</span>
               <button
                 disabled={query.pageNumber >= totalPages}
                 onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber + 1 }))}
                 style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber >= totalPages ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber >= totalPages ? 'not-allowed' : 'pointer' }}
-              >Next →</button>
+              >{t('next')}</button>
             </div>
           </div>
         )}
@@ -201,33 +199,33 @@ export function SuppliersPage() {
         open={!!confirmId}
         onClose={() => setConfirmId(null)}
         onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
-        title="Delete supplier"
-        message="This action cannot be undone."
+        title={t('delete_supplier')}
+        message={t('cannot_undo')}
       />
 
       <Modal open={!!modal} onClose={() => setModal(null)} width={440}>
         {modal && (
           <>
-            <ModalTitle>{modal.mode === 'add' ? 'Add supplier' : 'Edit supplier'}</ModalTitle>
+            <ModalTitle>{modal.mode === 'add' ? t('add_supplier_title') : t('edit_supplier_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Company name">
+              <Field label={t('field_company')}>
                 <Input placeholder="e.g. NovaSupply" value={modal.name} onChange={e => setModal(prev => ({ ...prev!, name: e.target.value }))} />
               </Field>
-              <Field label="Contact name">
+              <Field label={t('field_contact')}>
                 <Input placeholder="e.g. Ana Petrović" value={modal.contactName} onChange={e => setModal(prev => ({ ...prev!, contactName: e.target.value }))} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label="Email">
+                <Field label={t('email')}>
                   <Input type="email" placeholder="contact@co.com" value={modal.contactEmail} onChange={e => setModal(prev => ({ ...prev!, contactEmail: e.target.value }))} />
                 </Field>
-                <Field label="Phone">
+                <Field label={t('phone')}>
                   <Input placeholder="+1..." value={modal.contactPhone} onChange={e => setModal(prev => ({ ...prev!, contactPhone: e.target.value }))} />
                 </Field>
               </div>
             </div>
             <ModalActions>
-              <BtnSecondary onClick={() => setModal(null)}>Cancel</BtnSecondary>
-              <BtnPrimary onClick={save} disabled={saving}>Save supplier</BtnPrimary>
+              <BtnSecondary onClick={() => setModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={save} disabled={saving}>{t('save_supplier')}</BtnPrimary>
             </ModalActions>
           </>
         )}

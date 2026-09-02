@@ -3,6 +3,7 @@ import { getCategories, createCategory, updateCategory, deleteCategory } from '.
 import { getProducts } from '../api/products';
 import type { CategoryDto, ProductDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, LoadingState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -17,6 +18,7 @@ interface CategoryModalState {
 
 export function CategoriesPage() {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,20 +42,20 @@ export function CategoriesPage() {
 
   const save = async () => {
     if (!modal) return;
-    if (!modal.name.trim()) { showToast('Category name is required'); return; }
+    if (!modal.name.trim()) { showToast(t('category_name_required')); return; }
     setSaving(true);
     try {
       if (modal.mode === 'add') {
         await createCategory({ name: modal.name, description: modal.description || undefined });
-        showToast('Category added');
+        showToast(t('category_added'));
       } else {
         await updateCategory(modal.publicId!, { name: modal.name, description: modal.description || undefined });
-        showToast('Category updated');
+        showToast(t('category_updated'));
       }
       setModal(null);
       await load();
     } catch {
-      showToast('Failed to save category');
+      showToast(t('category_save_failed'));
     } finally {
       setSaving(false);
     }
@@ -62,19 +64,19 @@ export function CategoriesPage() {
   const handleDelete = async (publicId: string) => {
     try {
       await deleteCategory(publicId);
-      showToast('Category deleted');
+      showToast(t('category_deleted'));
       await load();
     } catch {
-      showToast('Failed to delete category');
+      showToast(t('category_delete_failed'));
     }
   };
 
   return (
     <>
       <PageHeader
-        title="Categories"
-        subtitle="Group products for reporting and filtering"
-        action={<AddButton onClick={openAdd} label="+ Add category" />}
+        title={t('nav_categories')}
+        subtitle={t('categories_subtitle')}
+        action={<AddButton onClick={openAdd} label={t('add_category')} />}
       />
 
       {loading && <LoadingState />}
@@ -85,18 +87,18 @@ export function CategoriesPage() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{c.name}</div>
               <div style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 100, background: '#f3eefe', color: '#6d28d9', flexShrink: 0, marginLeft: 8 }}>
-                {productCount(c.publicId)} items
+                {productCount(c.publicId)} {t('items_suffix')}
               </div>
             </div>
             <div style={{ fontSize: 13, color: '#71717a', marginTop: 8, minHeight: 36 }}>{c.description || '—'}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button onClick={() => openEdit(c)}
                 style={{ height: 32, flex: 1, borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-                Edit
+                {t('edit')}
               </button>
               <button onClick={() => setConfirmId(c.publicId)}
                 style={{ height: 32, flex: 1, borderRadius: 8, border: '1px solid #fbdada', background: '#fff5f5', color: '#dc2626', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-                Delete
+                {t('delete')}
               </button>
             </div>
           </div>
@@ -104,32 +106,32 @@ export function CategoriesPage() {
       </div>
 
       {!loading && categories.length === 0 && (
-        <div style={{ textAlign: 'center', color: '#a1a1aa', fontSize: 13.5, paddingTop: 60 }}>No categories yet.</div>
+        <div style={{ textAlign: 'center', color: '#a1a1aa', fontSize: 13.5, paddingTop: 60 }}>{t('no_categories')}</div>
       )}
 
       <ConfirmModal
         open={!!confirmId}
         onClose={() => setConfirmId(null)}
         onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
-        title="Delete category"
-        message="This action cannot be undone."
+        title={t('delete_category')}
+        message={t('cannot_undo')}
       />
 
       <Modal open={!!modal} onClose={() => setModal(null)} width={400}>
         {modal && (
           <>
-            <ModalTitle>{modal.mode === 'add' ? 'Add category' : 'Edit category'}</ModalTitle>
+            <ModalTitle>{modal.mode === 'add' ? t('add_category_title') : t('edit_category_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Name">
+              <Field label={t('name')}>
                 <Input placeholder="e.g. Audio" value={modal.name} onChange={e => setModal(prev => ({ ...prev!, name: e.target.value }))} />
               </Field>
-              <Field label="Description">
+              <Field label={t('description')}>
                 <Input placeholder="Optional description" value={modal.description} onChange={e => setModal(prev => ({ ...prev!, description: e.target.value }))} />
               </Field>
             </div>
             <ModalActions>
-              <BtnSecondary onClick={() => setModal(null)}>Cancel</BtnSecondary>
-              <BtnPrimary onClick={save} disabled={saving}>Save category</BtnPrimary>
+              <BtnSecondary onClick={() => setModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={save} disabled={saving}>{t('save_category')}</BtnPrimary>
             </ModalActions>
           </>
         )}

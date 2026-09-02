@@ -2,11 +2,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { getUsers, deleteUser, registerUser } from '../api/users';
 import type { UserDto, AdminRegisterUserRequest } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, ActionBtn, LoadingState, EmptyState, AddButton } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function RoleBadge({ roles }: { roles: string[] }) {
+  const { t } = useLanguage();
   const isAdmin = roles.includes('Admin');
   return (
     <span style={{
@@ -15,7 +17,7 @@ function RoleBadge({ roles }: { roles: string[] }) {
       background: isAdmin ? '#f3eefe' : '#f4f4f5',
       color: isAdmin ? '#6d28d9' : '#71717a',
     }}>
-      {isAdmin ? 'Admin' : 'User'}
+      {isAdmin ? t('role_admin') : t('role_user')}
     </span>
   );
 }
@@ -24,6 +26,7 @@ const EMPTY_FORM: AdminRegisterUserRequest = { firstName: '', lastName: '', user
 
 export function UsersPage() {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -43,10 +46,10 @@ export function UsersPage() {
     setDeleting(user.userPublicId);
     try {
       await deleteUser(user.userPublicId);
-      showToast('User deleted');
+      showToast(t('user_deleted'));
       await load();
     } catch {
-      showToast('Failed to delete user');
+      showToast(t('user_delete_failed'));
     } finally {
       setDeleting(null);
     }
@@ -54,18 +57,18 @@ export function UsersPage() {
 
   const handleRegister = async () => {
     if (!form.firstName || !form.lastName || !form.username || !form.email || !form.password) {
-      showToast('All fields are required');
+      showToast(t('all_fields_required'));
       return;
     }
     setSubmitting(true);
     try {
       await registerUser(form);
-      showToast('User registered');
+      showToast(t('user_registered'));
       setModalOpen(false);
       setForm(EMPTY_FORM);
       await load();
     } catch {
-      showToast('Failed to register user');
+      showToast(t('user_register_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -74,7 +77,6 @@ export function UsersPage() {
   const set = (field: keyof AdminRegisterUserRequest) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
 
-  const COLS = ['Name', 'Username', 'Email', 'Role', 'Actions'];
   const GRID = '1.4fr 1.2fr 1.8fr 0.7fr 0.6fr';
   const isMobile = useIsMobile();
 
@@ -84,55 +86,55 @@ export function UsersPage() {
         open={!!confirmUser}
         onClose={() => setConfirmUser(null)}
         onConfirm={() => { if (confirmUser) handleDelete(confirmUser); setConfirmUser(null); }}
-        title="Delete user"
+        title={t('delete_user')}
         message={confirmUser ? `Delete ${confirmUser.firstName} ${confirmUser.lastName} (${confirmUser.email})?` : undefined}
         loading={deleting === confirmUser?.userPublicId}
       />
 
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(EMPTY_FORM); }}>
-        <ModalTitle>Register New User</ModalTitle>
+        <ModalTitle>{t('register_new_user')}</ModalTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="First Name">
+            <Field label={t('field_first_name')}>
               <Input value={form.firstName} onChange={set('firstName')} placeholder="Jane" />
             </Field>
-            <Field label="Last Name">
+            <Field label={t('field_last_name')}>
               <Input value={form.lastName} onChange={set('lastName')} placeholder="Doe" />
             </Field>
           </div>
-          <Field label="Username">
+          <Field label={t('field_username')}>
             <Input value={form.username} onChange={set('username')} placeholder="janedoe" />
           </Field>
-          <Field label="Email">
+          <Field label={t('email')}>
             <Input type="email" value={form.email} onChange={set('email')} placeholder="jane@example.com" />
           </Field>
-          <Field label="Password">
+          <Field label={t('field_password')}>
             <Input type="password" value={form.password} onChange={set('password')} placeholder="••••••••" />
           </Field>
         </div>
         <ModalActions>
-          <BtnSecondary onClick={() => { setModalOpen(false); setForm(EMPTY_FORM); }}>Cancel</BtnSecondary>
+          <BtnSecondary onClick={() => { setModalOpen(false); setForm(EMPTY_FORM); }}>{t('cancel')}</BtnSecondary>
           <BtnPrimary onClick={handleRegister} disabled={submitting}>
-            {submitting ? 'Registering...' : 'Register User'}
+            {submitting ? t('registering') : t('register_user')}
           </BtnPrimary>
         </ModalActions>
       </Modal>
 
       <PageHeader
-        title="Users"
-        subtitle="Manage users in your tenant"
-        action={<AddButton onClick={() => setModalOpen(true)} label="+ Register User" />}
+        title={t('nav_users')}
+        subtitle={t('users_subtitle')}
+        action={<AddButton onClick={() => setModalOpen(true)} label={t('register_user_btn')} />}
       />
 
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 560 : undefined }}>
-          {COLS.map((h, i) => (
+          {[t('name'), t('field_username'), t('email'), t('col_role'), t('actions')].map((h, i) => (
             <div key={h} style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
           ))}
         </div>
 
         {loading && <LoadingState />}
-        {!loading && users.length === 0 && <EmptyState message="No users found." />}
+        {!loading && users.length === 0 && <EmptyState message={t('no_users')} />}
 
         {users.map(u => {
           const isAdmin = u.roles.includes('Admin');
@@ -149,7 +151,7 @@ export function UsersPage() {
                     onClick={() => setConfirmUser(u)}
                     disabled={deleting === u.userPublicId}
                   >
-                    {deleting === u.userPublicId ? '...' : 'Delete'}
+                    {deleting === u.userPublicId ? '...' : t('delete')}
                   </ActionBtn>
                 )}
               </div>

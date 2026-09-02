@@ -6,6 +6,7 @@ import { getSuppliers } from '../api/suppliers';
 import type { ProductDto, CategoryDto, SupplierDto } from '../types';
 import { formatMoney } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -48,6 +49,7 @@ const emptyProduct: ProductModalState = { open: true, mode: 'add', name: '', des
 
 export function ProductsPage() {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -120,7 +122,7 @@ export function ProductsPage() {
 
   const saveProduct = async () => {
     if (!productModal) return;
-    if (!productModal.name.trim()) { showToast('Product name is required'); return; }
+    if (!productModal.name.trim()) { showToast(t('product_name_required')); return; }
     setSaving(true);
     try {
       const body = {
@@ -131,17 +133,17 @@ export function ProductsPage() {
       };
       if (productModal.mode === 'add') {
         await createProduct(body);
-        showToast('Product added');
+        showToast(t('product_added'));
         setProductModal(null);
         setQuery(q => ({ ...q, pageNumber: 1 }));
       } else {
         await updateProduct(productModal.publicId!, body);
-        showToast('Product updated');
+        showToast(t('product_updated'));
         setProductModal(null);
         await load();
       }
     } catch {
-      showToast('Failed to save product');
+      showToast(t('product_save_failed'));
     } finally {
       setSaving(false);
     }
@@ -150,10 +152,10 @@ export function ProductsPage() {
   const handleDelete = async (publicId: string) => {
     try {
       await deleteProduct(publicId);
-      showToast('Product deleted');
+      showToast(t('product_deleted'));
       await load();
     } catch {
-      showToast('Failed to delete product');
+      showToast(t('product_delete_failed'));
     }
   };
 
@@ -164,15 +166,15 @@ export function ProductsPage() {
   const saveStock = async () => {
     if (!stockModal) return;
     const qty = parseInt(stockModal.quantity) || 0;
-    if (qty <= 0) { showToast('Enter a valid quantity'); return; }
+    if (qty <= 0) { showToast(t('stock_qty_invalid')); return; }
     setSaving(true);
     try {
       await createStockEntry(stockModal.publicId, { quantity: qty, notes: stockModal.notes || undefined, stockEntryType: stockModal.type });
-      showToast('Stock updated');
+      showToast(t('stock_updated'));
       setStockModal(null);
       await load();
     } catch {
-      showToast('Failed to update stock');
+      showToast(t('stock_update_failed'));
     } finally {
       setSaving(false);
     }
@@ -186,9 +188,9 @@ export function ProductsPage() {
   return (
     <>
       <PageHeader
-        title="Products"
-        subtitle={`${totalCount} products`}
-        action={<AddButton onClick={openAdd} label="+ Add product" />}
+        title={t('nav_products')}
+        subtitle={`${totalCount} ${t('products_subtitle')}`}
+        action={<AddButton onClick={openAdd} label={t('add_product')} />}
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
@@ -196,43 +198,43 @@ export function ProductsPage() {
           <input
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
-            placeholder="Search by name or description…"
+            placeholder={t('search_products')}
             style={{ height: 40, width: isMobile ? '100%' : 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
           />
           <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setQuery(q => ({ ...q, pageNumber: 1 })); }}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="">All categories</option>
+            <option value="">{t('all_categories')}</option>
             {categories.map(c => <option key={c.publicId} value={c.name}>{c.name}</option>)}
           </select>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="name">Sort: Name</option>
-            <option value="price">Sort: Price</option>
-            <option value="actualStockQuantity">Sort: Stock</option>
+            <option value="name">{t('sort_name')}</option>
+            <option value="price">{t('sort_price')}</option>
+            <option value="actualStockQuantity">{t('sort_stock')}</option>
           </select>
           <select value={query.isAscending ? 'asc' : 'desc'} onChange={e => setQuery(q => ({ ...q, isAscending: e.target.value === 'asc', pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
+            <option value="asc">{t('ascending')}</option>
+            <option value="desc">{t('descending')}</option>
           </select>
         </div>
       </div>
 
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 1.3fr 0.8fr 0.7fr 1.5fr', padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 12, minWidth: isMobile ? 660 : undefined }}>
-          {sortBtn('Product', 'name')}
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Category</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Supplier</div>
-          {sortBtn('Price', 'price')}
-          {sortBtn('Stock', 'actualStockQuantity')}
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>Actions</div>
+          {sortBtn(t('col_product'), 'name')}
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('category')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('supplier')}</div>
+          {sortBtn(t('price'), 'price')}
+          {sortBtn(t('col_stock'), 'actualStockQuantity')}
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
         {!loading && products.length === 0 && (
-          <EmptyState message={query.search || categoryFilter ? 'No products match your filters.' : 'No products yet.'} />
+          <EmptyState message={query.search || categoryFilter ? t('no_products_filtered') : t('no_products')} />
         )}
 
         {products.map((p, idx) => {
@@ -258,10 +260,10 @@ export function ProductsPage() {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <ActionBtn onClick={() => navigate(`/products/${p.publicId}`)}>View</ActionBtn>
-                <ActionBtn onClick={() => openStock(p)}>Adjust</ActionBtn>
-                <ActionBtn onClick={() => openEdit(p)}>Edit</ActionBtn>
-                <ActionBtn variant="danger" onClick={() => setConfirmId(p.publicId)}>Delete</ActionBtn>
+                <ActionBtn onClick={() => navigate(`/products/${p.publicId}`)}>{t('view')}</ActionBtn>
+                <ActionBtn onClick={() => openStock(p)}>{t('adjust')}</ActionBtn>
+                <ActionBtn onClick={() => openEdit(p)}>{t('edit')}</ActionBtn>
+                <ActionBtn variant="danger" onClick={() => setConfirmId(p.publicId)}>{t('delete')}</ActionBtn>
               </div>
             </div>
           );
@@ -270,28 +272,24 @@ export function ProductsPage() {
         {totalCount > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', borderTop: '1px solid #ececf0', background: '#fafafa' }}>
             <div style={{ fontSize: 13, color: '#71717a' }}>
-              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} of ${totalCount}`}
+              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} ${t('of')} ${totalCount}`}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <select value={query.pageSize} onChange={e => setQuery(q => ({ ...q, pageSize: Number(e.target.value), pageNumber: 1 }))}
                 style={{ height: 32, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 12.5, fontFamily: 'inherit', background: '#ffffff', color: '#3f3f46' }}>
-                <option value={5}>5 / page</option>
-                <option value={10}>10 / page</option>
-                <option value={25}>25 / page</option>
-                <option value={50}>50 / page</option>
-                <option value={100}>100 / page</option>
+                {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} {t('per_page')}</option>)}
               </select>
               <button
                 disabled={query.pageNumber <= 1}
                 onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber - 1 }))}
                 style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber <= 1 ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber <= 1 ? 'not-allowed' : 'pointer' }}
-              >← Prev</button>
-              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>Page {query.pageNumber} of {totalPages}</span>
+              >{t('prev')}</button>
+              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>{t('page')} {query.pageNumber} {t('of')} {totalPages}</span>
               <button
                 disabled={query.pageNumber >= totalPages}
                 onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber + 1 }))}
                 style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber >= totalPages ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber >= totalPages ? 'not-allowed' : 'pointer' }}
-              >Next →</button>
+              >{t('next')}</button>
             </div>
           </div>
         )}
@@ -301,37 +299,37 @@ export function ProductsPage() {
         open={!!confirmId}
         onClose={() => setConfirmId(null)}
         onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
-        title="Delete product"
-        message="This action cannot be undone."
+        title={t('delete_product')}
+        message={t('cannot_undo')}
       />
 
       {/* Product Modal */}
       <Modal open={!!pm} onClose={() => setProductModal(null)} width={460}>
         {pm && (
           <>
-            <ModalTitle>{pm.mode === 'add' ? 'Add product' : 'Edit product'}</ModalTitle>
+            <ModalTitle>{pm.mode === 'add' ? t('add_product_title') : t('edit_product_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Name">
+              <Field label={t('name')}>
                 <Input placeholder="e.g. Wireless Mouse" value={pm.name} onChange={e => setProductModal(prev => ({ ...prev!, name: e.target.value }))} />
               </Field>
-              <Field label="Description">
+              <Field label={t('description')}>
                 <Input placeholder="Short description" value={pm.description} onChange={e => setProductModal(prev => ({ ...prev!, description: e.target.value }))} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label="Price ($)">
+                <Field label={t('field_price')}>
                   <Input type="number" placeholder="0.00" value={pm.price} onChange={e => setProductModal(prev => ({ ...prev!, price: e.target.value }))} />
                 </Field>
-                <Field label="Min. stock qty">
+                <Field label={t('field_min_stock')}>
                   <Input type="number" placeholder="0" value={pm.minimumStockQuantity} onChange={e => setProductModal(prev => ({ ...prev!, minimumStockQuantity: e.target.value }))} />
                 </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label="Category">
+                <Field label={t('category')}>
                   <Select value={pm.categoryId} onChange={e => setProductModal(prev => ({ ...prev!, categoryId: e.target.value }))}>
                     {categories.map(c => <option key={c.publicId} value={c.publicId}>{c.name}</option>)}
                   </Select>
                 </Field>
-                <Field label="Supplier">
+                <Field label={t('supplier')}>
                   <Select value={pm.supplierId} onChange={e => setProductModal(prev => ({ ...prev!, supplierId: e.target.value }))}>
                     {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
                   </Select>
@@ -339,8 +337,8 @@ export function ProductsPage() {
               </div>
             </div>
             <ModalActions>
-              <BtnSecondary onClick={() => setProductModal(null)}>Cancel</BtnSecondary>
-              <BtnPrimary onClick={saveProduct} disabled={saving}>Save product</BtnPrimary>
+              <BtnSecondary onClick={() => setProductModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={saveProduct} disabled={saving}>{t('save_product')}</BtnPrimary>
             </ModalActions>
           </>
         )}
@@ -350,33 +348,33 @@ export function ProductsPage() {
       <Modal open={!!sm} onClose={() => setStockModal(null)} width={400}>
         {sm && (
           <>
-            <ModalTitle>Adjust stock</ModalTitle>
+            <ModalTitle>{t('adjust_stock')}</ModalTitle>
             <div style={{ fontSize: 13, color: '#71717a', marginTop: -12, marginBottom: 18 }}>
-              {sm.productName} · current: {sm.currentStock}
+              {sm.productName} · {t('current_prefix')}{sm.currentStock}
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {([1, 2, 3] as StockType[]).map(t => {
-                const labels: Record<StockType, string> = { 1: 'Stock in', 2: 'Stock out', 3: 'Adjustment' };
-                const active = sm.type === t;
+              {([1, 2, 3] as StockType[]).map(type => {
+                const labels: Record<StockType, string> = { 1: t('stock_btn_in'), 2: t('stock_btn_out'), 3: t('stock_btn_adj') };
+                const active = sm.type === type;
                 return (
-                  <button key={t} onClick={() => setStockModal(prev => ({ ...prev!, type: t }))}
+                  <button key={type} onClick={() => setStockModal(prev => ({ ...prev!, type }))}
                     style={{ height: 34, flex: 1, borderRadius: 9, border: active ? 'none' : '1px solid #e4e4e7', background: active ? '#18181b' : '#ffffff', color: active ? '#ffffff' : '#52525b', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-                    {labels[t]}
+                    {labels[type]}
                   </button>
                 );
               })}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label="Quantity">
+              <Field label={t('quantity')}>
                 <Input type="number" placeholder="0" value={sm.quantity} onChange={e => setStockModal(prev => ({ ...prev!, quantity: e.target.value }))} />
               </Field>
-              <Field label="Notes">
+              <Field label={t('notes')}>
                 <Input placeholder="Optional note" value={sm.notes} onChange={e => setStockModal(prev => ({ ...prev!, notes: e.target.value }))} />
               </Field>
             </div>
             <ModalActions>
-              <BtnSecondary onClick={() => setStockModal(null)}>Cancel</BtnSecondary>
-              <BtnPrimary onClick={saveStock} disabled={saving}>Save</BtnPrimary>
+              <BtnSecondary onClick={() => setStockModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={saveStock} disabled={saving}>{t('save')}</BtnPrimary>
             </ModalActions>
           </>
         )}

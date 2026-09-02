@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById, getStockEntries } from '../api/products';
 import type { ProductDto, StockEntryDto } from '../types';
-import { formatMoney, formatDate, STOCK_ENTRY_TYPE } from '../types';
+import { formatMoney, formatDate } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, LoadingState, EmptyState } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -27,10 +28,12 @@ const ENTRY_TYPE_COLORS: Record<number, { bg: string; color: string }> = {
 export function ProductDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const navigate = useNavigate();
+  const { t, lang } = useLanguage();
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [entries, setEntries] = useState<StockEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+  const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
 
   useEffect(() => {
     if (!publicId) return;
@@ -40,11 +43,17 @@ export function ProductDetailPage() {
   }, [publicId]);
 
   if (loading) return <LoadingState />;
-  if (!product) return <EmptyState message="Product not found." />;
+  if (!product) return <EmptyState message={t('product_not_found')} />;
 
   const swatch = SWATCHES[product.name.charCodeAt(0) % SWATCHES.length];
   const actualStock = entries.reduce((sum, e) => sum + (e.stockEntryType === 1 ? e.quantity : -e.quantity), 0);
   const low = actualStock < product.minimumStockQuantity;
+
+  const stockTypeLabel = (type: number) => {
+    if (type === 1) return t('stock_type_in');
+    if (type === 2) return t('stock_type_out');
+    return t('stock_type_adj');
+  };
 
   return (
     <>
@@ -60,7 +69,7 @@ export function ProductDetailPage() {
               fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
             }}
           >
-            ← Back
+            {t('back')}
           </button>
         }
       />
@@ -79,28 +88,28 @@ export function ProductDetailPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
-        <InfoCard label="Price" value={formatMoney(product.price)} />
+        <InfoCard label={t('price')} value={formatMoney(product.price)} />
         <InfoCard
-          label="Current stock"
+          label={t('current_stock')}
           value={String(actualStock)}
-          sub={low ? '⚠ Below minimum' : `Min: ${product.minimumStockQuantity}`}
+          sub={low ? t('below_minimum') : `${t('min_prefix')}${product.minimumStockQuantity}`}
         />
-        <InfoCard label="Minimum stock" value={String(product.minimumStockQuantity)} />
-        <InfoCard label="Category" value={product.categoryName} sub={product.supplierName} />
+        <InfoCard label={t('minimum_stock')} value={String(product.minimumStockQuantity)} />
+        <InfoCard label={t('category')} value={product.categoryName} sub={product.supplierName} />
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, color: '#18181b', marginBottom: 12, letterSpacing: '-0.01em' }}>
-        Stock history
+        {t('stock_history')}
       </div>
 
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.7fr 0.8fr 1.4fr', padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 480 : undefined }}>
-          {['Type', 'Qty', 'Date', 'Notes'].map(h => (
+          {[t('col_type'), t('col_qty'), t('date'), t('notes')].map(h => (
             <div key={h} style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</div>
           ))}
         </div>
 
-        {entries.length === 0 && <EmptyState message="No stock entries yet." />}
+        {entries.length === 0 && <EmptyState message={t('no_stock_entries')} />}
 
         {entries.map(e => {
           const c = ENTRY_TYPE_COLORS[e.stockEntryType] ?? { bg: '#f4f4f5', color: '#71717a' };
@@ -108,11 +117,11 @@ export function ProductDetailPage() {
             <div key={e.publicId} style={{ display: 'grid', gridTemplateColumns: '1fr 0.7fr 0.8fr 1.4fr', padding: '13px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 480 : undefined }}>
               <div>
                 <span style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 100, background: c.bg, color: c.color }}>
-                  {STOCK_ENTRY_TYPE[e.stockEntryType] ?? e.stockEntryType}
+                  {stockTypeLabel(e.stockEntryType)}
                 </span>
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{e.quantity}</div>
-              <div style={{ fontSize: 13, color: '#52525b' }}>{formatDate(e.entryDate)}</div>
+              <div style={{ fontSize: 13, color: '#52525b' }}>{formatDate(e.entryDate, locale)}</div>
               <div style={{ fontSize: 13, color: '#71717a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.notes ?? '—'}</div>
             </div>
           );

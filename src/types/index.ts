@@ -138,8 +138,8 @@ export function formatMoney(n: number) {
   return '$' + Number(n).toFixed(2);
 }
 
-export function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+export function formatDate(d: string, locale = 'en-US') {
+  return new Date(d).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export interface UserDto {
