@@ -379,3 +379,85 @@ export function EmptyState({ message }: { message: string }) {
     </div>
   );
 }
+
+interface PaginationProps {
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+export function Pagination({ pageNumber, pageSize, totalCount, totalPages, onPageChange, onPageSizeChange }: PaginationProps) {
+  const { t } = useLanguage();
+  const isMobile = useIsMobile();
+  const from = (pageNumber - 1) * pageSize + 1;
+  const to = Math.min(pageNumber * pageSize, totalCount);
+
+  const btnStyle = (disabled: boolean): React.CSSProperties => ({
+    height: isMobile ? 36 : 32,
+    width: isMobile ? 36 : 'auto',
+    padding: isMobile ? 0 : '0 12px',
+    borderRadius: 8,
+    border: '1px solid #e4e4e7',
+    background: '#ffffff',
+    color: disabled ? '#a1a1aa' : '#3f3f46',
+    fontSize: isMobile ? 16 : 12.5,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  });
+
+  const sizeSelect = (
+    <select
+      value={pageSize}
+      onChange={e => onPageSizeChange(Number(e.target.value))}
+      style={{
+        height: isMobile ? 32 : 32,
+        borderRadius: 8,
+        border: '1px solid #e4e4e7',
+        padding: '0 10px',
+        fontSize: 12.5,
+        fontFamily: 'inherit',
+        background: '#ffffff',
+        color: '#3f3f46',
+      }}
+    >
+      {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} {t('per_page')}</option>)}
+    </select>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ borderTop: '1px solid #ececf0', background: '#fafafa', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button disabled={pageNumber <= 1} onClick={() => onPageChange(pageNumber - 1)} style={btnStyle(pageNumber <= 1)}>‹</button>
+          <span style={{ fontSize: 13, color: '#52525b', fontWeight: 600 }}>
+            {t('page')} {pageNumber} {t('of')} {totalPages}
+          </span>
+          <button disabled={pageNumber >= totalPages} onClick={() => onPageChange(pageNumber + 1)} style={btnStyle(pageNumber >= totalPages)}>›</button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#a1a1aa' }}>{from}–{to} {t('of')} {totalCount}</span>
+          {sizeSelect}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', borderTop: '1px solid #ececf0', background: '#fafafa' }}>
+      <div style={{ fontSize: 13, color: '#71717a' }}>{from}–{to} {t('of')} {totalCount}</div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {sizeSelect}
+        <button disabled={pageNumber <= 1} onClick={() => onPageChange(pageNumber - 1)} style={btnStyle(pageNumber <= 1)}>{t('prev')}</button>
+        <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>{t('page')} {pageNumber} {t('of')} {totalPages}</span>
+        <button disabled={pageNumber >= totalPages} onClick={() => onPageChange(pageNumber + 1)} style={btnStyle(pageNumber >= totalPages)}>{t('next')}</button>
+      </div>
+    </div>
+  );
+}

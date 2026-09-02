@@ -3,7 +3,7 @@ import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '..
 import type { SupplierDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState } from '../components/Layout';
+import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, Pagination } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -170,28 +170,14 @@ export function SuppliersPage() {
         ))}
 
         {totalCount > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', borderTop: '1px solid #ececf0', background: '#fafafa' }}>
-            <div style={{ fontSize: 13, color: '#71717a' }}>
-              {`${(query.pageNumber - 1) * query.pageSize + 1}–${Math.min(query.pageNumber * query.pageSize, totalCount)} ${t('of')} ${totalCount}`}
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <select value={query.pageSize} onChange={e => setQuery(q => ({ ...q, pageSize: Number(e.target.value), pageNumber: 1 }))}
-                style={{ height: 32, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 12.5, fontFamily: 'inherit', background: '#ffffff', color: '#3f3f46' }}>
-                {[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} {t('per_page')}</option>)}
-              </select>
-              <button
-                disabled={query.pageNumber <= 1}
-                onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber - 1 }))}
-                style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber <= 1 ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber <= 1 ? 'not-allowed' : 'pointer' }}
-              >{t('prev')}</button>
-              <span style={{ fontSize: 13, color: '#52525b', minWidth: 90, textAlign: 'center' }}>{t('page')} {query.pageNumber} {t('of')} {totalPages}</span>
-              <button
-                disabled={query.pageNumber >= totalPages}
-                onClick={() => setQuery(q => ({ ...q, pageNumber: q.pageNumber + 1 }))}
-                style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: query.pageNumber >= totalPages ? '#a1a1aa' : '#3f3f46', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: query.pageNumber >= totalPages ? 'not-allowed' : 'pointer' }}
-              >{t('next')}</button>
-            </div>
-          </div>
+          <Pagination
+            pageNumber={query.pageNumber}
+            pageSize={query.pageSize}
+            totalCount={totalCount}
+            totalPages={totalPages}
+            onPageChange={n => setQuery(q => ({ ...q, pageNumber: n }))}
+            onPageSizeChange={s => setQuery(q => ({ ...q, pageSize: s, pageNumber: 1 }))}
+          />
         )}
       </TableCard>
 
