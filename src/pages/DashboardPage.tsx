@@ -40,7 +40,13 @@ export function DashboardPage() {
               )}
               {data.recentOrders.map(o => {
                 return (
-                  <div key={o.publicId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 22px', borderBottom: '1px solid #f5f4f7' }}>
+                  <div
+                    key={o.publicId}
+                    onClick={() => navigate('/orders', { state: { openOrderId: o.publicId } })}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 22px', borderBottom: '1px solid #f5f4f7', cursor: 'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                  >
                     <div>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{o.supplierName}</div>
                       <div style={{ fontSize: 12, color: '#a1a1aa', marginTop: 2 }}>{formatDate(o.orderDate)} · #{o.publicId.slice(0, 8)}</div>

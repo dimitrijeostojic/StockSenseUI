@@ -97,6 +97,14 @@ export function OrdersPage() {
     window.history.replaceState({}, '');
   }, [loading, location.state, products, suppliers]);
 
+  // Open order detail from dashboard
+  useEffect(() => {
+    const openOrderId = (location.state as { openOrderId?: string } | null)?.openOrderId;
+    if (!openOrderId || loading) return;
+    getDetail(openOrderId).then(() => setDetailId(openOrderId));
+    window.history.replaceState({}, '');
+  }, [loading, location.state]);
+
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
   const isMobile = useIsMobile();
 
