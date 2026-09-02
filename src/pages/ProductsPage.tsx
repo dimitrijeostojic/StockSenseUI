@@ -127,7 +127,7 @@ export function ProductsPage() {
         name: productModal.name, description: productModal.description,
         price: parseFloat(productModal.price) || 0,
         minimumStockQuantity: parseInt(productModal.minimumStockQuantity) || 0,
-        categoryId: productModal.categoryId, supplierId: productModal.supplierId,
+        categoryPublicId: productModal.categoryId, supplierPublicId: productModal.supplierId,
       };
       if (productModal.mode === 'add') {
         await createProduct(body);

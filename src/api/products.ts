@@ -26,8 +26,8 @@ export interface CreateProductBody {
   description?: string;
   price: number;
   minimumStockQuantity: number;
-  categoryId: string;
-  supplierId: string;
+  categoryPublicId: string;
+  supplierPublicId: string;
 }
 
 export async function createProduct(body: CreateProductBody): Promise<void> {
