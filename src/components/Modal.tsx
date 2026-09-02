@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ModalProps {
@@ -53,13 +53,15 @@ export function ModalActions({ children }: { children: ReactNode }) {
 interface FieldProps {
   label: string;
   children: ReactNode;
+  error?: string;
 }
 
-export function Field({ label, children }: FieldProps) {
+export function Field({ label, children, error }: FieldProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>{label}</label>
+      <label style={{ fontSize: 12.5, fontWeight: 600, color: error ? '#dc2626' : '#3f3f46' }}>{label}</label>
       {children}
+      {error && <div style={{ fontSize: 11.5, color: '#dc2626', marginTop: -2 }}>{error}</div>}
     </div>
   );
 }
@@ -70,12 +72,50 @@ const inputBase: React.CSSProperties = {
   background: '#fafafa', color: '#18181b', width: '100%',
 };
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} style={{ ...inputBase, ...props.style }} />;
+const errorOverride: React.CSSProperties = { border: '1px solid #dc2626', background: '#fff8f8' };
+
+export function Input({ error, style, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
+  return <input {...props} style={{ ...inputBase, ...(error ? errorOverride : {}), ...style }} />;
 }
 
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} style={{ ...inputBase, ...props.style }} />;
+export function Select({ error, style, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: boolean }) {
+  return <select {...props} style={{ ...inputBase, ...(error ? errorOverride : {}), ...style }} />;
+}
+
+export function PasswordInput({ error, style, ...props }: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> & { error?: boolean }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        {...props}
+        type={show ? 'text' : 'password'}
+        style={{ ...inputBase, ...(error ? errorOverride : {}), paddingRight: 42, ...style }}
+      />
+      <button
+        type="button"
+        onClick={() => setShow(s => !s)}
+        tabIndex={-1}
+        style={{
+          position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa',
+          padding: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        {show ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
 }
 
 export function BtnPrimary({ children, onClick, disabled, style }: { children: ReactNode; onClick?: () => void; disabled?: boolean; style?: React.CSSProperties }) {

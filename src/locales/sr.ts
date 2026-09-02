@@ -224,4 +224,25 @@ export const sr: Record<TranslationKey, string> = {
   no_stock_entries: 'Još nema unosa zaliha.',
   back: '← Nazad',
   product_not_found: 'Proizvod nije pronađen.',
+
+  // Validation
+  field_required: 'Polje je obavezno',
+  email_invalid: 'Nevažeća email adresa',
+  password_min_length: 'Potrebno najmanje 6 karaktera',
+  price_positive: 'Mora biti veće od 0',
+  qty_positive: 'Mora biti pozitivan broj',
+
+  // Profile menu
+  account_info: 'Informacije o nalogu',
+  profile_role: 'Uloga',
+
+  // Change password
+  change_password: 'Promena lozinke',
+  current_password: 'Trenutna lozinka',
+  new_password: 'Nova lozinka',
+  confirm_new_password: 'Potvrdi novu lozinku',
+  password_changed: 'Lozinka uspešno promenjena',
+  password_change_failed: 'Greška pri promeni lozinke',
+  passwords_mismatch: 'Nove lozinke se ne poklapaju',
+  saving: 'Čuvanje…',
 };

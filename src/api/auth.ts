@@ -17,3 +17,7 @@ export async function logoutApi(refreshToken: string): Promise<void> {
 export async function registerUser(req: { firstName: string; lastName: string; username: string; email: string; password: string }): Promise<void> {
   await apiClient.post('/api/auth/register-user', req);
 }
+
+export async function changePassword(req: { currentPassword: string; newPassword: string; confirmNewPassword: string }): Promise<void> {
+  await apiClient.put('/api/auth/change-password', req);
+}

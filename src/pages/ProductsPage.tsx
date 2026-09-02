@@ -60,7 +60,9 @@ export function ProductsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [productModal, setProductModal] = useState<ProductModalState | null>(null);
+  const [productErrors, setProductErrors] = useState<{ name?: string; price?: string }>({});
   const [stockModal, setStockModal] = useState<StockModalState | null>(null);
+  const [stockErrors, setStockErrors] = useState<{ quantity?: string }>({});
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
@@ -108,10 +110,12 @@ export function ProductsPage() {
   };
 
   const openAdd = () => {
+    setProductErrors({});
     setProductModal({ ...emptyProduct, categoryId: categories[0]?.publicId ?? '', supplierId: suppliers[0]?.publicId ?? '' });
   };
 
   const openEdit = (p: ProductDto) => {
+    setProductErrors({});
     setProductModal({
       open: true, mode: 'edit', publicId: p.publicId,
       name: p.name, description: p.description ?? '',
@@ -122,7 +126,12 @@ export function ProductsPage() {
 
   const saveProduct = async () => {
     if (!productModal) return;
-    if (!productModal.name.trim()) { showToast(t('product_name_required')); return; }
+    const errs: { name?: string; price?: string } = {};
+    if (!productModal.name.trim()) errs.name = t('field_required');
+    const priceVal = parseFloat(productModal.price);
+    if (!productModal.price || isNaN(priceVal) || priceVal <= 0) errs.price = t('price_positive');
+    if (Object.keys(errs).length) { setProductErrors(errs); return; }
+    setProductErrors({});
     setSaving(true);
     try {
       const body = {
@@ -160,13 +169,15 @@ export function ProductsPage() {
   };
 
   const openStock = (p: ProductDto) => {
+    setStockErrors({});
     setStockModal({ open: true, publicId: p.publicId, productName: p.name, currentStock: p.actualStockQuantity, type: 1, quantity: '', notes: '' });
   };
 
   const saveStock = async () => {
     if (!stockModal) return;
     const qty = parseInt(stockModal.quantity) || 0;
-    if (qty <= 0) { showToast(t('stock_qty_invalid')); return; }
+    if (qty <= 0) { setStockErrors({ quantity: t('qty_positive') }); return; }
+    setStockErrors({});
     setSaving(true);
     try {
       await createStockEntry(stockModal.publicId, { quantity: qty, notes: stockModal.notes || undefined, stockEntryType: stockModal.type });
@@ -295,15 +306,17 @@ export function ProductsPage() {
           <>
             <ModalTitle>{pm.mode === 'add' ? t('add_product_title') : t('edit_product_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('name')}>
-                <Input placeholder="e.g. Wireless Mouse" value={pm.name} onChange={e => setProductModal(prev => ({ ...prev!, name: e.target.value }))} />
+              <Field label={t('name')} error={productErrors.name}>
+                <Input error={!!productErrors.name} placeholder="e.g. Wireless Mouse" value={pm.name}
+                  onChange={e => { setProductModal(prev => ({ ...prev!, name: e.target.value })); setProductErrors(prev => ({ ...prev, name: undefined })); }} />
               </Field>
               <Field label={t('description')}>
                 <Input placeholder="Short description" value={pm.description} onChange={e => setProductModal(prev => ({ ...prev!, description: e.target.value }))} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label={t('field_price')}>
-                  <Input type="number" placeholder="0.00" value={pm.price} onChange={e => setProductModal(prev => ({ ...prev!, price: e.target.value }))} />
+                <Field label={t('field_price')} error={productErrors.price}>
+                  <Input error={!!productErrors.price} type="number" placeholder="0.00" value={pm.price}
+                    onChange={e => { setProductModal(prev => ({ ...prev!, price: e.target.value })); setProductErrors(prev => ({ ...prev, price: undefined })); }} />
                 </Field>
                 <Field label={t('field_min_stock')}>
                   <Input type="number" placeholder="0" value={pm.minimumStockQuantity} onChange={e => setProductModal(prev => ({ ...prev!, minimumStockQuantity: e.target.value }))} />
@@ -351,8 +364,9 @@ export function ProductsPage() {
               })}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('quantity')}>
-                <Input type="number" placeholder="0" value={sm.quantity} onChange={e => setStockModal(prev => ({ ...prev!, quantity: e.target.value }))} />
+              <Field label={t('quantity')} error={stockErrors.quantity}>
+                <Input error={!!stockErrors.quantity} type="number" placeholder="0" value={sm.quantity}
+                  onChange={e => { setStockModal(prev => ({ ...prev!, quantity: e.target.value })); setStockErrors({}); }} />
               </Field>
               <Field label={t('notes')}>
                 <Input placeholder="Optional note" value={sm.notes} onChange={e => setStockModal(prev => ({ ...prev!, notes: e.target.value }))} />

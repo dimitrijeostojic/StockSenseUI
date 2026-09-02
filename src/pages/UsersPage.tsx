@@ -4,7 +4,7 @@ import type { UserDto, AdminRegisterUserRequest } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, ActionBtn, LoadingState, EmptyState, AddButton } from '../components/Layout';
-import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { Modal, ModalTitle, ModalActions, Field, Input, PasswordInput, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function RoleBadge({ roles }: { roles: string[] }) {
@@ -33,6 +33,7 @@ export function UsersPage() {
   const [confirmUser, setConfirmUser] = useState<UserDto | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<AdminRegisterUserRequest>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof AdminRegisterUserRequest, string>>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -55,11 +56,19 @@ export function UsersPage() {
     }
   };
 
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const handleRegister = async () => {
-    if (!form.firstName || !form.lastName || !form.username || !form.email || !form.password) {
-      showToast(t('all_fields_required'));
-      return;
-    }
+    const errs: Partial<Record<keyof AdminRegisterUserRequest, string>> = {};
+    if (!form.firstName.trim()) errs.firstName = t('field_required');
+    if (!form.lastName.trim()) errs.lastName = t('field_required');
+    if (!form.username.trim()) errs.username = t('field_required');
+    if (!form.email.trim()) errs.email = t('field_required');
+    else if (!emailRe.test(form.email)) errs.email = t('email_invalid');
+    if (!form.password) errs.password = t('field_required');
+    else if (form.password.length < 6) errs.password = t('password_min_length');
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
     setSubmitting(true);
     try {
       await registerUser(form);
@@ -74,8 +83,10 @@ export function UsersPage() {
     }
   };
 
-  const set = (field: keyof AdminRegisterUserRequest) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (field: keyof AdminRegisterUserRequest) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(f => ({ ...f, [field]: e.target.value }));
+    setErrors(prev => ({ ...prev, [field]: undefined }));
+  };
 
   const GRID = '1.4fr 1.2fr 1.8fr 0.7fr 0.6fr';
   const isMobile = useIsMobile();
@@ -91,29 +102,29 @@ export function UsersPage() {
         loading={deleting === confirmUser?.userPublicId}
       />
 
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(EMPTY_FORM); }}>
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); }}>
         <ModalTitle>{t('register_new_user')}</ModalTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label={t('field_first_name')}>
-              <Input value={form.firstName} onChange={set('firstName')} placeholder="Jane" />
+            <Field label={t('field_first_name')} error={errors.firstName}>
+              <Input error={!!errors.firstName} value={form.firstName} onChange={set('firstName')} placeholder="Jane" />
             </Field>
-            <Field label={t('field_last_name')}>
-              <Input value={form.lastName} onChange={set('lastName')} placeholder="Doe" />
+            <Field label={t('field_last_name')} error={errors.lastName}>
+              <Input error={!!errors.lastName} value={form.lastName} onChange={set('lastName')} placeholder="Doe" />
             </Field>
           </div>
-          <Field label={t('field_username')}>
-            <Input value={form.username} onChange={set('username')} placeholder="janedoe" />
+          <Field label={t('field_username')} error={errors.username}>
+            <Input error={!!errors.username} value={form.username} onChange={set('username')} placeholder="janedoe" />
           </Field>
-          <Field label={t('email')}>
-            <Input type="email" value={form.email} onChange={set('email')} placeholder="jane@example.com" />
+          <Field label={t('email')} error={errors.email}>
+            <Input error={!!errors.email} type="email" value={form.email} onChange={set('email')} placeholder="jane@example.com" />
           </Field>
-          <Field label={t('field_password')}>
-            <Input type="password" value={form.password} onChange={set('password')} placeholder="••••••••" />
+          <Field label={t('field_password')} error={errors.password}>
+            <PasswordInput error={!!errors.password} value={form.password} onChange={set('password')} placeholder="••••••••" />
           </Field>
         </div>
         <ModalActions>
-          <BtnSecondary onClick={() => { setModalOpen(false); setForm(EMPTY_FORM); }}>{t('cancel')}</BtnSecondary>
+          <BtnSecondary onClick={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); }}>{t('cancel')}</BtnSecondary>
           <BtnPrimary onClick={handleRegister} disabled={submitting}>
             {submitting ? t('registering') : t('register_user')}
           </BtnPrimary>
@@ -123,7 +134,7 @@ export function UsersPage() {
       <PageHeader
         title={t('nav_users')}
         subtitle={t('users_subtitle')}
-        action={<AddButton onClick={() => setModalOpen(true)} label={t('register_user_btn')} />}
+        action={<AddButton onClick={() => { setErrors({}); setForm(EMPTY_FORM); setModalOpen(true); }} label={t('register_user_btn')} />}
       />
 
       <TableCard>

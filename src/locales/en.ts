@@ -222,6 +222,27 @@ export const en = {
   no_stock_entries: 'No stock entries yet.',
   back: '← Back',
   product_not_found: 'Product not found.',
+
+  // Validation
+  field_required: 'This field is required',
+  email_invalid: 'Invalid email format',
+  password_min_length: 'At least 6 characters required',
+  price_positive: 'Must be greater than 0',
+  qty_positive: 'Must be a positive number',
+
+  // Profile menu
+  account_info: 'Account info',
+  profile_role: 'Role',
+
+  // Change password
+  change_password: 'Change Password',
+  current_password: 'Current Password',
+  new_password: 'New Password',
+  confirm_new_password: 'Confirm New Password',
+  password_changed: 'Password changed successfully',
+  password_change_failed: 'Failed to change password',
+  passwords_mismatch: 'New passwords do not match',
+  saving: 'Saving…',
 };
 
 export type TranslationKey = keyof typeof en;

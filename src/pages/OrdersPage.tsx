@@ -55,6 +55,8 @@ export function OrdersPage() {
   const [query, setQuery] = useState<Query>({ pageNumber: 1, pageSize: 10, search: '', sortBy: 'orderDate', isAscending: false });
   const [searchInput, setSearchInput] = useState('');
   const [modal, setModal] = useState<OrderModalState | null>(null);
+  const [newOrderErrors, setNewOrderErrors] = useState<{ items?: string }>({});
+  const [editErrors, setEditErrors] = useState<{ orderDate?: string }>({});
   const [saving, setSaving] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -139,6 +141,7 @@ export function OrdersPage() {
   };
 
   const openAdd = () => {
+    setNewOrderErrors({});
     setModal({
       open: true,
       supplierId: suppliers[0]?.publicId ?? '',
@@ -149,7 +152,8 @@ export function OrdersPage() {
 
   const saveOrder = async () => {
     if (!modal) return;
-    if (!modal.items.length) { showToast(t('add_at_least_one')); return; }
+    if (!modal.items.length) { setNewOrderErrors({ items: t('add_at_least_one') }); return; }
+    setNewOrderErrors({});
     setSaving(true);
     try {
       await createOrder({
@@ -192,6 +196,7 @@ export function OrdersPage() {
   const openEdit = async (o: OrderListDto) => {
     const detail = await getDetail(o.publicId);
     if (!detail) { showToast(t('order_load_failed')); return; }
+    setEditErrors({});
     setEditModal({
       publicId: o.publicId,
       supplierId: detail.supplierPublicId,
@@ -202,6 +207,10 @@ export function OrdersPage() {
 
   const saveEdit = async () => {
     if (!editModal) return;
+    const errs: { orderDate?: string } = {};
+    if (!editModal.orderDate) errs.orderDate = t('field_required');
+    if (errs.orderDate) { setEditErrors(errs); return; }
+    setEditErrors({});
     setSaving(true);
     try {
       await updateOrder(editModal.publicId, {
@@ -345,8 +354,9 @@ export function OrdersPage() {
                   {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
                 </Select>
               </Field>
-              <Field label={t('order_date_field')}>
-                <Input type="date" value={editModal.orderDate} onChange={e => setEditModal(prev => ({ ...prev!, orderDate: e.target.value }))} />
+              <Field label={t('order_date_field')} error={editErrors.orderDate}>
+                <Input error={!!editErrors.orderDate} type="date" value={editModal.orderDate}
+                  onChange={e => { setEditModal(prev => ({ ...prev!, orderDate: e.target.value })); setEditErrors({}); }} />
               </Field>
               <Field label={t('notes')}>
                 <Input placeholder="Optional note" value={editModal.notes} onChange={e => setEditModal(prev => ({ ...prev!, notes: e.target.value }))} />
@@ -458,10 +468,11 @@ export function OrdersPage() {
               })}
             </div>
 
-            <button onClick={() => setModal(prev => ({ ...prev!, items: [...prev!.items, { productId: products[0]?.publicId ?? '', quantity: '1' }] }))}
-              style={{ marginTop: 10, height: 36, padding: '0 14px', borderRadius: 8, border: '1px dashed #d4d4d8', background: '#ffffff', color: '#71717a', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+            <button onClick={() => { setModal(prev => ({ ...prev!, items: [...prev!.items, { productId: products[0]?.publicId ?? '', quantity: '1' }] })); setNewOrderErrors({}); }}
+              style={{ marginTop: 10, height: 36, padding: '0 14px', borderRadius: 8, border: `1px dashed ${newOrderErrors.items ? '#dc2626' : '#d4d4d8'}`, background: '#ffffff', color: newOrderErrors.items ? '#dc2626' : '#71717a', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
               {t('add_item')}
             </button>
+            {newOrderErrors.items && <div style={{ fontSize: 11.5, color: '#dc2626', marginTop: 4 }}>{newOrderErrors.items}</div>}
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, paddingTop: 14, borderTop: '1px solid #ececf0' }}>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>{t('order_total')}</div>

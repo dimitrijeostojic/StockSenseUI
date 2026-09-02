@@ -32,6 +32,7 @@ export function SuppliersPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<SupplierModalState | null>(null);
+  const [errors, setErrors] = useState<{ name?: string; contactEmail?: string }>({});
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [query, setQuery] = useState<Query>({ pageNumber: 1, pageSize: 10, search: '', sortBy: 'name', isAscending: true });
@@ -69,15 +70,17 @@ export function SuppliersPage() {
     );
   };
 
-  const openAdd = () => setModal({ open: true, mode: 'add', name: '', contactName: '', contactEmail: '', contactPhone: '' });
-  const openEdit = (s: SupplierDto) => setModal({
-    open: true, mode: 'edit', publicId: s.publicId,
-    name: s.name, contactName: s.contactName ?? '', contactEmail: s.contactEmail ?? '', contactPhone: s.contactPhone ?? '',
-  });
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const openAdd = () => { setErrors({}); setModal({ open: true, mode: 'add', name: '', contactName: '', contactEmail: '', contactPhone: '' }); };
+  const openEdit = (s: SupplierDto) => { setErrors({}); setModal({ open: true, mode: 'edit', publicId: s.publicId, name: s.name, contactName: s.contactName ?? '', contactEmail: s.contactEmail ?? '', contactPhone: s.contactPhone ?? '' }); };
 
   const save = async () => {
     if (!modal) return;
-    if (!modal.name.trim()) { showToast(t('supplier_name_required')); return; }
+    const errs: { name?: string; contactEmail?: string } = {};
+    if (!modal.name.trim()) errs.name = t('field_required');
+    if (modal.contactEmail && !emailRe.test(modal.contactEmail)) errs.contactEmail = t('email_invalid');
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
       const body = { name: modal.name, contactName: modal.contactName || undefined, contactEmail: modal.contactEmail || undefined, contactPhone: modal.contactPhone || undefined };
@@ -194,15 +197,17 @@ export function SuppliersPage() {
           <>
             <ModalTitle>{modal.mode === 'add' ? t('add_supplier_title') : t('edit_supplier_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('field_company')}>
-                <Input placeholder="e.g. NovaSupply" value={modal.name} onChange={e => setModal(prev => ({ ...prev!, name: e.target.value }))} />
+              <Field label={t('field_company')} error={errors.name}>
+                <Input error={!!errors.name} placeholder="e.g. NovaSupply" value={modal.name}
+                  onChange={e => { setModal(prev => ({ ...prev!, name: e.target.value })); setErrors(prev => ({ ...prev, name: undefined })); }} />
               </Field>
               <Field label={t('field_contact')}>
                 <Input placeholder="e.g. Ana Petrović" value={modal.contactName} onChange={e => setModal(prev => ({ ...prev!, contactName: e.target.value }))} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label={t('email')}>
-                  <Input type="email" placeholder="contact@co.com" value={modal.contactEmail} onChange={e => setModal(prev => ({ ...prev!, contactEmail: e.target.value }))} />
+                <Field label={t('email')} error={errors.contactEmail}>
+                  <Input error={!!errors.contactEmail} type="email" placeholder="contact@co.com" value={modal.contactEmail}
+                    onChange={e => { setModal(prev => ({ ...prev!, contactEmail: e.target.value })); setErrors(prev => ({ ...prev, contactEmail: undefined })); }} />
                 </Field>
                 <Field label={t('phone')}>
                   <Input placeholder="+1..." value={modal.contactPhone} onChange={e => setModal(prev => ({ ...prev!, contactPhone: e.target.value }))} />

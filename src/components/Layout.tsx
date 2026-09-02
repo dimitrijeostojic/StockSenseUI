@@ -4,6 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage, type Lang } from '../contexts/LanguageContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { TranslationKey } from '../locales/en';
+import { changePassword } from '../api/auth';
+import { useToast } from '../contexts/ToastContext';
+import { Modal, ModalTitle, ModalActions, Field, PasswordInput, BtnPrimary, BtnSecondary } from './Modal';
 
 const BASE_NAV_ITEMS: { to: string; labelKey: TranslationKey; icon: ReactNode }[] = [
   {
@@ -73,10 +76,55 @@ const ADMIN_NAV_ITEM: { to: string; labelKey: TranslationKey; icon: ReactNode } 
 export function Layout({ children }: { children: ReactNode }) {
   const { logout, user, isAdmin } = useAuth();
   const { t, lang, setLang } = useLanguage();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const navItems = useMemo(() => isAdmin ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS, [isAdmin]);
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [accountModal, setAccountModal] = useState(false);
+  const [pwModal, setPwModal] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+  const [pwErrors, setPwErrors] = useState<{ currentPassword?: string; newPassword?: string; confirmNewPassword?: string }>({});
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const handleChangePassword = async () => {
+    const errs: { currentPassword?: string; newPassword?: string; confirmNewPassword?: string } = {};
+    if (!pwForm.currentPassword) errs.currentPassword = t('field_required');
+    if (!pwForm.newPassword) errs.newPassword = t('field_required');
+    else if (pwForm.newPassword.length < 6) errs.newPassword = t('password_min_length');
+    if (!pwForm.confirmNewPassword) errs.confirmNewPassword = t('field_required');
+    else if (pwForm.newPassword && pwForm.confirmNewPassword !== pwForm.newPassword) errs.confirmNewPassword = t('passwords_mismatch');
+    if (Object.keys(errs).length) { setPwErrors(errs); return; }
+    setPwErrors({});
+    setPwSaving(true);
+    try {
+      await changePassword(pwForm);
+      showToast(t('password_changed'));
+      setPwModal(false);
+      setPwForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { description?: string } } })?.response?.data;
+      const msg = data?.description || t('password_change_failed');
+      setPwErrors({ currentPassword: msg });
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const openPwModal = () => {
+    setProfileMenuOpen(false);
+    setPwForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+    setPwErrors({});
+    setPwModal(true);
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const openAccountModal = () => {
+    setProfileMenuOpen(false);
+    setAccountModal(true);
+    if (isMobile) setSidebarOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -162,20 +210,83 @@ export function Layout({ children }: { children: ReactNode }) {
           {langBtn('sr', 'SR')}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 8 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: '50%', background: '#f3eefe',
-            color: '#6d28d9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 13, flexShrink: 0,
-          }}>
-            {initials}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#18181b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user?.email ?? 'User'}
+        <div style={{ position: 'relative' }}>
+          {profileMenuOpen && (
+            <>
+              <div
+                onClick={() => setProfileMenuOpen(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 299 }}
+              />
+              <div style={{
+                position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, right: 0,
+                background: '#ffffff', border: '1px solid #ececf0', borderRadius: 12,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 300,
+                overflow: 'hidden', padding: 6,
+              }}>
+                <button
+                  onClick={openAccountModal}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '9px 12px', border: 'none', background: 'transparent',
+                    borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    color: '#18181b', fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f4f4f5')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <svg width="15" height="15" viewBox="0 0 18 18" style={{ color: '#71717a', flexShrink: 0 }}>
+                    <circle cx="9" cy="6" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M2.5,15.5 C2.5,12 5.4,9.5 9,9.5 C12.6,9.5 15.5,12 15.5,15.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                  {t('account_info')}
+                </button>
+                <button
+                  onClick={openPwModal}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '9px 12px', border: 'none', background: 'transparent',
+                    borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    color: '#18181b', fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f4f4f5')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <svg width="15" height="15" viewBox="0 0 16 16" style={{ color: '#71717a', flexShrink: 0 }}>
+                    <rect x="3" y="7" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M5,7 V5 a3,3 0 0,1 6,0 V7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  {t('change_password')}
+                </button>
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setProfileMenuOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: 8,
+              width: '100%', background: profileMenuOpen ? '#f4f4f5' : 'transparent', border: 'none',
+              borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+            }}
+            onMouseEnter={e => { if (!profileMenuOpen) e.currentTarget.style.background = '#fafafa'; }}
+            onMouseLeave={e => { if (!profileMenuOpen) e.currentTarget.style.background = 'transparent'; }}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', background: '#f3eefe',
+              color: '#6d28d9', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13, flexShrink: 0,
+            }}>
+              {initials}
             </div>
-            <div style={{ fontSize: 11.5, color: '#a1a1aa' }}>{user?.role ?? 'User'}</div>
-          </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#18181b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.email ?? 'User'}
+              </div>
+              <div style={{ fontSize: 11, color: '#a1a1aa' }}>{user?.role ?? 'User'}</div>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0, color: '#a1a1aa', transform: profileMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+              <polyline points="1,4 6,9 11,4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
         <button
           onClick={handleLogout}
@@ -246,6 +357,81 @@ export function Layout({ children }: { children: ReactNode }) {
           {children}
         </div>
       </div>
+
+      <Modal open={accountModal} onClose={() => setAccountModal(false)} width={360}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', background: '#f3eefe',
+            color: '#6d28d9', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 800, fontSize: 20, marginBottom: 12,
+          }}>
+            {initials}
+          </div>
+          <ModalTitle>{t('account_info')}</ModalTitle>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#fafafa', borderRadius: 10, border: '1px solid #ececf0', overflow: 'hidden' }}>
+          {[
+            { label: t('email'), value: user?.email ?? '—' },
+            { label: t('profile_role'), value: user?.role ?? '—' },
+          ].map((row, i, arr) => (
+            <div key={i} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '12px 16px', borderBottom: i < arr.length - 1 ? '1px solid #ececf0' : 'none',
+            }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: '#71717a' }}>{row.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#18181b' }}>{row.value}</span>
+            </div>
+          ))}
+        </div>
+        <ModalActions>
+          <BtnSecondary onClick={() => setAccountModal(false)}>{t('close')}</BtnSecondary>
+          <BtnPrimary onClick={() => { setAccountModal(false); openPwModal(); }}>{t('change_password')}</BtnPrimary>
+        </ModalActions>
+      </Modal>
+
+      <Modal open={pwModal} onClose={() => { setPwModal(false); setPwErrors({}); }} width={400}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 18 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 14, background: '#f3eefe',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+          }}>
+            <svg width="22" height="22" viewBox="0 0 16 16" style={{ color: '#6d28d9' }}>
+              <rect x="3" y="7" width="10" height="8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M5,7 V5 a3,3 0 0,1 6,0 V7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          <ModalTitle>{t('change_password')}</ModalTitle>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Field label={t('current_password')} error={pwErrors.currentPassword}>
+            <PasswordInput
+              error={!!pwErrors.currentPassword} placeholder="••••••••"
+              value={pwForm.currentPassword}
+              onChange={e => { setPwForm(f => ({ ...f, currentPassword: e.target.value })); setPwErrors(prev => ({ ...prev, currentPassword: undefined })); }}
+            />
+          </Field>
+          <Field label={t('new_password')} error={pwErrors.newPassword}>
+            <PasswordInput
+              error={!!pwErrors.newPassword} placeholder="••••••••"
+              value={pwForm.newPassword}
+              onChange={e => { setPwForm(f => ({ ...f, newPassword: e.target.value })); setPwErrors(prev => ({ ...prev, newPassword: undefined })); }}
+            />
+          </Field>
+          <Field label={t('confirm_new_password')} error={pwErrors.confirmNewPassword}>
+            <PasswordInput
+              error={!!pwErrors.confirmNewPassword} placeholder="••••••••"
+              value={pwForm.confirmNewPassword}
+              onChange={e => { setPwForm(f => ({ ...f, confirmNewPassword: e.target.value })); setPwErrors(prev => ({ ...prev, confirmNewPassword: undefined })); }}
+            />
+          </Field>
+        </div>
+        <ModalActions>
+          <BtnSecondary onClick={() => { setPwModal(false); setPwErrors({}); }}>{t('cancel')}</BtnSecondary>
+          <BtnPrimary onClick={handleChangePassword} disabled={pwSaving}>
+            {pwSaving ? t('saving') : t('change_password')}
+          </BtnPrimary>
+        </ModalActions>
+      </Modal>
     </div>
   );
 }

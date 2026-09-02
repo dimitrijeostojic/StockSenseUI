@@ -23,6 +23,7 @@ export function CategoriesPage() {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<CategoryModalState | null>(null);
+  const [errors, setErrors] = useState<{ name?: string }>({});
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -37,12 +38,14 @@ export function CategoriesPage() {
 
   const productCount = (catId: string) => products.filter(p => p.categoryPublicId === catId).length;
 
-  const openAdd = () => setModal({ open: true, mode: 'add', name: '', description: '' });
-  const openEdit = (c: CategoryDto) => setModal({ open: true, mode: 'edit', publicId: c.publicId, name: c.name, description: c.description ?? '' });
+  const openAdd = () => { setErrors({}); setModal({ open: true, mode: 'add', name: '', description: '' }); };
+  const openEdit = (c: CategoryDto) => { setErrors({}); setModal({ open: true, mode: 'edit', publicId: c.publicId, name: c.name, description: c.description ?? '' }); };
 
   const save = async () => {
     if (!modal) return;
-    if (!modal.name.trim()) { showToast(t('category_name_required')); return; }
+    const errs: { name?: string } = {};
+    if (!modal.name.trim()) errs.name = t('field_required');
+    if (errs.name) { setErrors(errs); return; }
     setSaving(true);
     try {
       if (modal.mode === 'add') {
@@ -122,8 +125,9 @@ export function CategoriesPage() {
           <>
             <ModalTitle>{modal.mode === 'add' ? t('add_category_title') : t('edit_category_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('name')}>
-                <Input placeholder="e.g. Audio" value={modal.name} onChange={e => setModal(prev => ({ ...prev!, name: e.target.value }))} />
+              <Field label={t('name')} error={errors.name}>
+                <Input error={!!errors.name} placeholder="e.g. Audio" value={modal.name}
+                  onChange={e => { setModal(prev => ({ ...prev!, name: e.target.value })); setErrors(prev => ({ ...prev, name: undefined })); }} />
               </Field>
               <Field label={t('description')}>
                 <Input placeholder="Optional description" value={modal.description} onChange={e => setModal(prev => ({ ...prev!, description: e.target.value }))} />
