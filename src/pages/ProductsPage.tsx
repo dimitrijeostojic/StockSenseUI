@@ -13,7 +13,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 
 const SWATCHES = ['#6d28d9', '#2563eb', '#16a34a', '#d97706', '#db2777', '#0891b2'];
 
-type StockType = 1 | 2 | 3;
+type StockType = 1 | 2;
 
 interface ProductModalState {
   open: boolean;
@@ -339,8 +339,8 @@ export function ProductsPage() {
               {sm.productName} · {t('current_prefix')}{sm.currentStock}
             </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {([1, 2, 3] as StockType[]).map(type => {
-                const labels: Record<StockType, string> = { 1: t('stock_btn_in'), 2: t('stock_btn_out'), 3: t('stock_btn_adj') };
+              {([1, 2] as StockType[]).map(type => {
+                const labels: Record<StockType, string> = { 1: t('stock_btn_in'), 2: t('stock_btn_out') };
                 const active = sm.type === type;
                 return (
                   <button key={type} onClick={() => setStockModal(prev => ({ ...prev!, type }))}
