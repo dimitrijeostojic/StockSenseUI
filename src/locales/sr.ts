@@ -235,6 +235,10 @@ export const sr: Record<TranslationKey, string> = {
   // Profile menu
   account_info: 'Informacije o nalogu',
   profile_role: 'Uloga',
+  profile_first_name: 'Ime',
+  profile_last_name: 'Prezime',
+  profile_username: 'Korisničko ime',
+  profile_company: 'Kompanija',
 
   // Change password
   change_password: 'Promena lozinke',

@@ -16,7 +16,8 @@
       "Bash(dotnet build *)",
       "Bash(dotnet test *)",
       "Bash(npx tsc *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(powershell -Command \"Get-Item *\")"
     ]
   }
 }

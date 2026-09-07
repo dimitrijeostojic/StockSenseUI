@@ -233,6 +233,10 @@ export const en = {
   // Profile menu
   account_info: 'Account info',
   profile_role: 'Role',
+  profile_first_name: 'First name',
+  profile_last_name: 'Last name',
+  profile_username: 'Username',
+  profile_company: 'Company',
 
   // Change password
   change_password: 'Change Password',

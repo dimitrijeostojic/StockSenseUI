@@ -5,6 +5,8 @@ import { useLanguage, type Lang } from '../contexts/LanguageContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 import type { TranslationKey } from '../locales/en';
 import { changePassword } from '../api/auth';
+import { getMyUser } from '../api/users';
+import type { GetMyUserResponse } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { Modal, ModalTitle, ModalActions, Field, PasswordInput, BtnPrimary, BtnSecondary } from './Modal';
 
@@ -83,6 +85,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [accountModal, setAccountModal] = useState(false);
+  const [myUser, setMyUser] = useState<GetMyUserResponse | null>(null);
+  const [myUserLoading, setMyUserLoading] = useState(false);
   const [pwModal, setPwModal] = useState(false);
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
   const [pwErrors, setPwErrors] = useState<{ currentPassword?: string; newPassword?: string; confirmNewPassword?: string }>({});
@@ -122,7 +126,10 @@ export function Layout({ children }: { children: ReactNode }) {
 
   const openAccountModal = () => {
     setProfileMenuOpen(false);
+    setMyUser(null);
     setAccountModal(true);
+    setMyUserLoading(true);
+    getMyUser().then(setMyUser).catch(() => {}).finally(() => setMyUserLoading(false));
     if (isMobile) setSidebarOpen(false);
   };
 
@@ -132,7 +139,9 @@ export function Layout({ children }: { children: ReactNode }) {
   };
 
   const closeSidebar = () => setSidebarOpen(false);
-  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'U';
+  const initials = user?.firstName && user?.lastName
+    ? (user.firstName[0] + user.lastName[0]).toUpperCase()
+    : user?.email ? user.email.slice(0, 2).toUpperCase() : 'U';
 
   const langBtn = (l: Lang, label: string) => (
     <button
@@ -167,7 +176,14 @@ export function Layout({ children }: { children: ReactNode }) {
         }}>
           <div style={{ width: 12, height: 12, borderRadius: 3, border: '2px solid #ffffff' }} />
         </div>
-        <div style={{ fontSize: 16.5, fontWeight: 800, color: '#18181b', letterSpacing: '-0.02em' }}>StockSense</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 16.5, fontWeight: 800, color: '#18181b', letterSpacing: '-0.02em' }}>StockSense</div>
+          {user?.tenantName && (
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6d28d9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {user.tenantName}
+            </div>
+          )}
+        </div>
         {isMobile && (
           <button
             onClick={closeSidebar}
@@ -282,6 +298,11 @@ export function Layout({ children }: { children: ReactNode }) {
                 {user?.email ?? 'User'}
               </div>
               <div style={{ fontSize: 11, color: '#a1a1aa' }}>{user?.role ?? 'User'}</div>
+              {user?.tenantName && (
+                <div style={{ fontSize: 10.5, color: '#6d28d9', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user.tenantName}
+                </div>
+              )}
             </div>
             <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0, color: '#a1a1aa', transform: profileMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
               <polyline points="1,4 6,9 11,4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -368,21 +389,32 @@ export function Layout({ children }: { children: ReactNode }) {
             {initials}
           </div>
           <ModalTitle>{t('account_info')}</ModalTitle>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#fafafa', borderRadius: 10, border: '1px solid #ececf0', overflow: 'hidden' }}>
-          {[
-            { label: t('email'), value: user?.email ?? '—' },
-            { label: t('profile_role'), value: user?.role ?? '—' },
-          ].map((row, i, arr) => (
-            <div key={i} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '12px 16px', borderBottom: i < arr.length - 1 ? '1px solid #ececf0' : 'none',
-            }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: '#71717a' }}>{row.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#18181b' }}>{row.value}</span>
+          {myUser && (
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#18181b', marginTop: 2 }}>
+              {myUser.firstName} {myUser.lastName}
             </div>
-          ))}
+          )}
         </div>
+        {myUserLoading ? (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: '#a1a1aa', fontSize: 13 }}>{t('loading')}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#fafafa', borderRadius: 10, border: '1px solid #ececf0', overflow: 'hidden' }}>
+            {[
+              ...(myUser?.username ? [{ label: t('profile_username'), value: myUser.username }] : []),
+              { label: t('email'), value: myUser?.email ?? user?.email ?? '—' },
+              { label: t('profile_role'), value: myUser?.roles.join(', ') ?? user?.role ?? '—' },
+              ...(user?.tenantName ? [{ label: t('profile_company'), value: user.tenantName }] : []),
+            ].map((row, i, arr) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 16px', borderBottom: i < arr.length - 1 ? '1px solid #ececf0' : 'none',
+              }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#71717a' }}>{row.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#18181b' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <ModalActions>
           <BtnSecondary onClick={() => setAccountModal(false)}>{t('close')}</BtnSecondary>
           <BtnPrimary onClick={() => { setAccountModal(false); openPwModal(); }}>{t('change_password')}</BtnPrimary>

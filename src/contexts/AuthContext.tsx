@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { login as apiLogin, register as apiRegister, logoutApi } from '../api/auth';
+import { getMyUser } from '../api/users';
 import type { LoginRequest, RegisterRequest } from '../types';
 
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
@@ -7,6 +8,9 @@ const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role
 interface AuthUser {
   email: string;
   firstName?: string;
+  lastName?: string;
+  username?: string;
+  tenantName?: string;
   role?: string;
 }
 
@@ -21,12 +25,16 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function decodeJwtRole(token: string): string | undefined {
+function decodeJwtClaims(token: string): Partial<AuthUser> {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload[ROLE_CLAIM] as string | undefined;
+    return {
+      role: payload[ROLE_CLAIM] as string | undefined,
+      username: payload['unique_name'] as string | undefined,
+      tenantName: payload['tenant_name'] as string | undefined,
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -42,22 +50,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) return null;
     const stored = getStoredUser();
     if (!stored) return null;
-    if (stored.role) return stored;
-    const role = decodeJwtRole(token);
-    if (role) {
-      const updated = { ...stored, role };
-      localStorage.setItem('authUser', JSON.stringify(updated));
-      return updated;
+    const claims = decodeJwtClaims(token);
+    const merged = { ...stored, ...claims };
+    if (JSON.stringify(merged) !== JSON.stringify(stored)) {
+      localStorage.setItem('authUser', JSON.stringify(merged));
     }
-    return stored;
+    return merged;
   });
 
   const login = useCallback(async (req: LoginRequest) => {
     const res = await apiLogin(req);
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
-    const role = decodeJwtRole(res.accessToken);
-    const authUser: AuthUser = { email: req.email, role };
+    const claims = decodeJwtClaims(res.accessToken);
+    let authUser: AuthUser = { email: req.email, ...claims };
+    try {
+      const profile = await getMyUser();
+      authUser = { ...authUser, firstName: profile.firstName, lastName: profile.lastName, username: profile.username };
+    } catch { /* proceed without profile details */ }
     localStorage.setItem('authUser', JSON.stringify(authUser));
     setUser(authUser);
   }, []);

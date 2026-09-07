@@ -1,5 +1,10 @@
 import { apiClient } from './client';
-import type { UserDto, AdminRegisterUserRequest } from '../types';
+import type { UserDto, AdminRegisterUserRequest, GetMyUserResponse } from '../types';
+
+export async function getMyUser(): Promise<GetMyUserResponse> {
+  const { data } = await apiClient.get<GetMyUserResponse>('/api/user/me');
+  return data;
+}
 
 export async function getUsers(): Promise<UserDto[]> {
   const { data } = await apiClient.get<{ items: UserDto[] }>('/api/user/GetAllUsers');

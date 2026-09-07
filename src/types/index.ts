@@ -151,6 +151,14 @@ export interface UserDto {
   roles: string[];
 }
 
+export interface GetMyUserResponse {
+  roles: string[];
+  firstName: string;
+  lastName: string;
+  username: string;
+  email: string;
+}
+
 export interface AdminRegisterUserRequest {
   firstName: string;
   lastName: string;

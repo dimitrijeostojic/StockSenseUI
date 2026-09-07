@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -83,7 +83,12 @@ export function LoginPage() {
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Password</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Password</label>
+                  <Link to="/forgot-password" style={{ fontSize: 12, color: '#6d28d9', textDecoration: 'none', fontWeight: 600 }}>
+                    Forgot password?
+                  </Link>
+                </div>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPw ? 'text' : 'password'} required placeholder="••••••••"
