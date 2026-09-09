@@ -170,6 +170,8 @@ export const sr: Record<TranslationKey, string> = {
   order_received_toast: 'Narudžbina primljena',
   order_cancelled_toast: 'Narudžbina otkazana',
   order_transition_failed: 'Greška pri ažuriranju narudžbine',
+  export_pdf: 'Izvezi PDF',
+  export_pdf_failed: 'Greška pri izvozu PDF-a',
 
   // Users
   users_subtitle: 'Upravljajte korisnicima u vašem nalogu',

@@ -39,3 +39,16 @@ export async function updateOrderStatus(publicId: string, status: number): Promi
 export async function deleteOrder(publicId: string): Promise<void> {
   await apiClient.delete(`/api/order/${publicId}`);
 }
+
+export async function exportOrderPdf(publicId: string): Promise<void> {
+  const { data, headers } = await apiClient.get(`/api/order/${publicId}/export-pdf`, { responseType: 'blob' });
+  const disposition: string = headers['content-disposition'] ?? '';
+  const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+  const filename = match?.[1]?.replace(/['"]/g, '') ?? `order-${publicId}.pdf`;
+  const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

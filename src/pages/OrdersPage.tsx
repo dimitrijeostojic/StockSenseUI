@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getOrders, getOrderById, createOrder, updateOrder, updateOrderStatus, deleteOrder } from '../api/orders';
+import { getOrders, getOrderById, createOrder, updateOrder, updateOrderStatus, deleteOrder, exportOrderPdf } from '../api/orders';
 import { getProducts } from '../api/products';
 import { getSuppliers } from '../api/suppliers';
 import type { OrderListDto, OrderDetailDto, ProductDto, SupplierDto } from '../types';
@@ -61,6 +61,7 @@ export function OrdersPage() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editModal, setEditModal] = useState<EditOrderModalState | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(q => ({ ...q, search: searchInput, pageNumber: 1 })), 400);
@@ -420,6 +421,15 @@ export function OrdersPage() {
 
                 <ModalActions>
                   <BtnSecondary onClick={() => setDetailId(null)}>{t('close')}</BtnSecondary>
+                  <BtnPrimary
+                    disabled={exportingPdf}
+                    onClick={async () => {
+                      setExportingPdf(true);
+                      try { await exportOrderPdf(detailId!); }
+                      catch { showToast(t('export_pdf_failed')); }
+                      finally { setExportingPdf(false); }
+                    }}
+                  >{exportingPdf ? '…' : t('export_pdf')}</BtnPrimary>
                 </ModalActions>
               </>
             )}

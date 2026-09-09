@@ -168,6 +168,8 @@ export const en = {
   order_received_toast: 'Order received',
   order_cancelled_toast: 'Order cancelled',
   order_transition_failed: 'Failed to update order',
+  export_pdf: 'Export PDF',
+  export_pdf_failed: 'Failed to export PDF',
 
   // Users
   users_subtitle: 'Manage users in your tenant',
