@@ -77,6 +77,15 @@ export const sr: Record<TranslationKey, string> = {
   product_deleted: 'Proizvod obrisan',
   product_save_failed: 'Greška pri čuvanju proizvoda',
   product_delete_failed: 'Greška pri brisanju proizvoda',
+  import_csv: '↑ Uvezi CSV',
+  bulk_import_title: 'Grupni uvoz proizvoda',
+  bulk_import_hint: 'Obavezne kolone: Name, Price, MinimumStockQuantity, CategoryName, SupplierName, ContactName, ContactEmail (Description opciono). Nedostajuće kategorije i dobavljači biće automatski kreirani.',
+  bulk_import_file_label: 'CSV fajl',
+  bulk_import_no_file: 'Prvo odaberite CSV fajl',
+  bulk_import_btn: 'Uvezi',
+  bulk_import_imported: 'uvezeno',
+  bulk_import_failed_label: 'neuspelo',
+  bulk_import_errors_label: 'Greške po redovima',
 
   // Stock modal
   adjust_stock: 'Prilagodi zalihu',

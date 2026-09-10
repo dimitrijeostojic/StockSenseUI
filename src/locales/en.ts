@@ -75,6 +75,15 @@ export const en = {
   product_deleted: 'Product deleted',
   product_save_failed: 'Failed to save product',
   product_delete_failed: 'Failed to delete product',
+  import_csv: '↑ Import CSV',
+  bulk_import_title: 'Bulk Import Products',
+  bulk_import_hint: 'Required columns: Name, Price, MinimumStockQuantity, CategoryName, SupplierName, ContactName, ContactEmail (Description optional). Missing categories and suppliers will be created automatically.',
+  bulk_import_file_label: 'CSV file',
+  bulk_import_no_file: 'Select a CSV file first',
+  bulk_import_btn: 'Import',
+  bulk_import_imported: 'imported',
+  bulk_import_failed_label: 'failed',
+  bulk_import_errors_label: 'Row errors',
 
   // Stock modal
   adjust_stock: 'Adjust stock',

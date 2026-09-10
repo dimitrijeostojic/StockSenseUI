@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProducts, createProduct, updateProduct, deleteProduct, createStockEntry } from '../api/products';
+import { getProducts, createProduct, updateProduct, deleteProduct, createStockEntry, bulkImportProducts } from '../api/products';
+import type { BulkImportResult } from '../api/products';
 import { getCategories } from '../api/categories';
 import { getSuppliers } from '../api/suppliers';
 import type { ProductDto, CategoryDto, SupplierDto } from '../types';
@@ -25,6 +26,14 @@ interface ProductModalState {
   minimumStockQuantity: string;
   categoryId: string;
   supplierId: string;
+}
+
+interface ImportModalState {
+  open: boolean;
+  file: File | null;
+  importing: boolean;
+  result: BulkImportResult | null;
+  fileError: string | null;
 }
 
 interface StockModalState {
@@ -65,6 +74,7 @@ export function ProductsPage() {
   const [stockErrors, setStockErrors] = useState<{ quantity?: string }>({});
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [importModal, setImportModal] = useState<ImportModalState | null>(null);
 
   // Debounce search
   useEffect(() => {
@@ -191,6 +201,23 @@ export function ProductsPage() {
     }
   };
 
+  const openImport = () => setImportModal({ open: true, file: null, importing: false, result: null, fileError: null });
+  const closeImport = () => setImportModal(null);
+
+  const handleBulkImport = async () => {
+    if (!importModal?.file) { setImportModal(prev => ({ ...prev!, fileError: t('bulk_import_no_file') })); return; }
+    setImportModal(prev => ({ ...prev!, importing: true, fileError: null }));
+    try {
+      const result = await bulkImportProducts(importModal.file);
+      setImportModal(prev => ({ ...prev!, importing: false, result }));
+      if (result.failureCount === 0) showToast(t('bulk_import_btn') + ' ' + t('bulk_import_imported'));
+      await load();
+    } catch {
+      setImportModal(prev => ({ ...prev!, importing: false }));
+      showToast(t('product_save_failed'));
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
   const pm = productModal;
   const sm = stockModal;
@@ -201,7 +228,17 @@ export function ProductsPage() {
       <PageHeader
         title={t('nav_products')}
         subtitle={`${totalCount} ${t('products_subtitle')}`}
-        action={<AddButton onClick={openAdd} label={t('add_product')} />}
+        action={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={openImport}
+              style={{ height: 40, padding: '0 18px', borderRadius: 10, border: '1px solid #e4e4e7', background: '#ffffff', color: '#3f3f46', fontSize: 13.5, fontWeight: 700, fontFamily: "'Manrope', system-ui, sans-serif", cursor: 'pointer' }}
+            >
+              {t('import_csv')}
+            </button>
+            <AddButton onClick={openAdd} label={t('add_product')} />
+          </div>
+        }
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
@@ -339,6 +376,90 @@ export function ProductsPage() {
               <BtnSecondary onClick={() => setProductModal(null)}>{t('cancel')}</BtnSecondary>
               <BtnPrimary onClick={saveProduct} disabled={saving}>{t('save_product')}</BtnPrimary>
             </ModalActions>
+          </>
+        )}
+      </Modal>
+
+      {/* Bulk Import Modal */}
+      <Modal open={!!importModal} onClose={closeImport} width={500}>
+        {importModal && (
+          <>
+            <ModalTitle>{t('bulk_import_title')}</ModalTitle>
+            {!importModal.result ? (
+              <>
+                <div style={{ fontSize: 12.5, color: '#71717a', marginTop: -12, marginBottom: 18, lineHeight: 1.5 }}>
+                  {t('bulk_import_hint')}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: importModal.fileError ? '#dc2626' : '#3f3f46', display: 'block', marginBottom: 6 }}>
+                      {t('bulk_import_file_label')}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                      <input
+                        type="file"
+                        accept=".csv"
+                        style={{ display: 'none' }}
+                        onChange={e => {
+                          const f = e.target.files?.[0] ?? null;
+                          setImportModal(prev => ({ ...prev!, file: f, fileError: null }));
+                        }}
+                      />
+                      <span style={{
+                        height: 40, padding: '0 14px', borderRadius: 10,
+                        border: importModal.fileError ? '1px solid #dc2626' : '1px solid #e4e4e7',
+                        background: '#fafafa', fontSize: 13.5, fontFamily: "'Manrope', system-ui, sans-serif",
+                        display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
+                        color: '#6d28d9', fontWeight: 700, cursor: 'pointer',
+                      }}>
+                        Choose file
+                      </span>
+                      <span style={{ fontSize: 13, color: importModal.file ? '#18181b' : '#a1a1aa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {importModal.file ? importModal.file.name : 'No file chosen'}
+                      </span>
+                    </label>
+                    {importModal.fileError && (
+                      <div style={{ fontSize: 11.5, color: '#dc2626', marginTop: 4 }}>{importModal.fileError}</div>
+                    )}
+                  </div>
+                </div>
+                <ModalActions>
+                  <BtnSecondary onClick={closeImport}>{t('cancel')}</BtnSecondary>
+                  <BtnPrimary onClick={handleBulkImport} disabled={importModal.importing}>
+                    {importModal.importing ? '…' : t('bulk_import_btn')}
+                  </BtnPrimary>
+                </ModalActions>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+                  <div style={{ flex: 1, textAlign: 'center', background: '#f0fdf4', borderRadius: 10, padding: '14px 0' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#16a34a' }}>{importModal.result.successCount}</div>
+                    <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>{t('bulk_import_imported')}</div>
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'center', background: importModal.result.failureCount > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: 10, padding: '14px 0' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: importModal.result.failureCount > 0 ? '#dc2626' : '#16a34a' }}>{importModal.result.failureCount}</div>
+                    <div style={{ fontSize: 12, color: importModal.result.failureCount > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>{t('bulk_import_failed_label')}</div>
+                  </div>
+                </div>
+                {importModal.result.errors.length > 0 && (
+                  <div style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{t('bulk_import_errors_label')}</div>
+                    <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {importModal.result.errors.map(e => (
+                        <div key={e.rowNumber} style={{ background: '#fef2f2', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, color: '#dc2626' }}>
+                          <span style={{ fontWeight: 700 }}>Row {e.rowNumber}:</span> {e.errorMessage}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <ModalActions>
+                  <BtnSecondary onClick={() => setImportModal(prev => ({ ...prev!, result: null, file: null }))}>{t('import_csv')}</BtnSecondary>
+                  <BtnPrimary onClick={closeImport}>{t('close')}</BtnPrimary>
+                </ModalActions>
+              </>
+            )}
           </>
         )}
       </Modal>

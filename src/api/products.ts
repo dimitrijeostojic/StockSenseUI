@@ -56,3 +56,16 @@ export async function getStockEntries(productId: string): Promise<StockEntryDto[
   const { data } = await apiClient.get<{ items: StockEntryDto[]; totalCount: number }>(`/api/product/${productId}/stockentry`);
   return data.items;
 }
+
+export interface BulkImportResult {
+  successCount: number;
+  failureCount: number;
+  errors: { rowNumber: number; errorMessage: string }[];
+}
+
+export async function bulkImportProducts(file: File): Promise<BulkImportResult> {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await apiClient.post<BulkImportResult>('/api/product/bulk-import', form);
+  return data;
+}
