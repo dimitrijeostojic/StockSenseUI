@@ -12,7 +12,7 @@ export interface GetProductsParams {
 }
 
 export async function getProducts(params: GetProductsParams = {}): Promise<PagedResponse<ProductDto>> {
-  const { data } = await apiClient.get<PagedResponse<ProductDto>>('/api/product', { params: { pageNumber: 1, pageSize: 1000, isAscending: true, ...params } });
+  const { data } = await apiClient.get<PagedResponse<ProductDto>>('/api/product', { params: { pageNumber: 1, pageSize: 100, isAscending: true, ...params } });
   return data;
 }
 
@@ -23,9 +23,11 @@ export async function getProductById(publicId: string): Promise<ProductDto> {
 
 export interface CreateProductBody {
   name: string;
+  sku: string;
   description?: string;
   price: number;
   minimumStockQuantity: number;
+  unitOfMeasurement: number;
   categoryPublicId: string;
   supplierPublicId: string;
 }

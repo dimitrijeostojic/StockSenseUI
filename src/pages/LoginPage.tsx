@@ -18,7 +18,7 @@ export function LoginPage() {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [regForm, setRegForm] = useState({
     firstName: '', lastName: '', username: '', email: '', password: '',
-    companyName: '', pib: '', address: '',
+    companyName: '', pib: '', address: '', logoUrl: '',
   });
 
   const handleLogin = async (e: FormEvent) => {
@@ -149,7 +149,10 @@ export function LoginPage() {
                   { label: 'Last name', key: 'lastName', placeholder: 'Doe' },
                 ].map(f => (
                   <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>{f.label}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>{f.label}</label>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>*</span>
+                    </div>
                     <input required placeholder={f.placeholder} value={regForm[f.key as keyof typeof regForm]}
                       onChange={e => setRegForm(p => ({ ...p, [f.key]: e.target.value }))}
                       style={{ height: 38, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13, fontFamily: 'inherit', background: '#fafafa', color: '#18181b', width: '100%' }} />
@@ -159,20 +162,30 @@ export function LoginPage() {
               {[
                 { label: 'Username', key: 'username', placeholder: 'johndoe', type: 'text' },
                 { label: 'Email', key: 'email', placeholder: 'you@company.com', type: 'email' },
-                { label: 'Company name', key: 'companyName', placeholder: 'Acme Inc.', type: 'text' },
-                { label: 'Tax ID (PIB)', key: 'pib', placeholder: '123456789', type: 'text' },
-                { label: 'Address', key: 'address', placeholder: '123 Main St', type: 'text' },
+                { label: 'Company name', key: 'companyName', placeholder: 'Acme Inc.', type: 'text', required: true },
+                { label: 'Tax ID (PIB)', key: 'pib', placeholder: '123456789', type: 'text', required: true },
+                { label: 'Address', key: 'address', placeholder: '123 Main St', type: 'text', required: false },
+                { label: 'Logo URL', key: 'logoUrl', placeholder: 'https://...', type: 'url', required: false },
               ].map(f => (
                 <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>{f.label}</label>
-                  <input required type={f.type} placeholder={f.placeholder}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>{f.label}</label>
+                    {f.required
+                      ? <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>*</span>
+                      : <span style={{ fontSize: 10.5, fontWeight: 600, color: '#a1a1aa', background: '#f4f4f5', borderRadius: 4, padding: '1px 5px' }}>optional</span>
+                    }
+                  </div>
+                  <input required={f.required} type={f.type} placeholder={f.placeholder}
                     value={regForm[f.key as keyof typeof regForm]}
                     onChange={e => setRegForm(p => ({ ...p, [f.key]: e.target.value }))}
                     style={{ height: 38, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13, fontFamily: 'inherit', background: '#fafafa', color: '#18181b', width: '100%' }} />
                 </div>
               ))}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Password</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Password</label>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>*</span>
+                </div>
                 <div style={{ position: 'relative' }}>
                   <input required type={showRegPw ? 'text' : 'password'} placeholder="••••••••"
                     value={regForm.password}

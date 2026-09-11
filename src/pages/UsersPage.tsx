@@ -4,7 +4,8 @@ import type { UserDto, AdminRegisterUserRequest } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, ActionBtn, LoadingState, EmptyState, AddButton } from '../components/Layout';
-import { Modal, ModalTitle, ModalActions, Field, Input, PasswordInput, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { Modal, ModalTitle, ModalActions, Field, Input, PasswordInput, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
+import { extractApiErrors } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function RoleBadge({ roles }: { roles: string[] }) {
@@ -35,6 +36,7 @@ export function UsersPage() {
   const [form, setForm] = useState<AdminRegisterUserRequest>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof AdminRegisterUserRequest, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     const data = await getUsers();
@@ -76,8 +78,10 @@ export function UsersPage() {
       setModalOpen(false);
       setForm(EMPTY_FORM);
       await load();
-    } catch {
-      showToast(t('user_register_failed'));
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setApiError(errs);
+      else showToast(t('user_register_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -102,29 +106,30 @@ export function UsersPage() {
         loading={deleting === confirmUser?.userPublicId}
       />
 
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); }}>
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); setApiError([]); }}>
         <ModalTitle>{t('register_new_user')}</ModalTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label={t('field_first_name')} error={errors.firstName}>
+            <Field label={t('field_first_name')} error={errors.firstName} required>
               <Input error={!!errors.firstName} value={form.firstName} onChange={set('firstName')} placeholder="Jane" />
             </Field>
-            <Field label={t('field_last_name')} error={errors.lastName}>
+            <Field label={t('field_last_name')} error={errors.lastName} required>
               <Input error={!!errors.lastName} value={form.lastName} onChange={set('lastName')} placeholder="Doe" />
             </Field>
           </div>
-          <Field label={t('field_username')} error={errors.username}>
+          <Field label={t('field_username')} error={errors.username} required>
             <Input error={!!errors.username} value={form.username} onChange={set('username')} placeholder="janedoe" />
           </Field>
-          <Field label={t('email')} error={errors.email}>
+          <Field label={t('email')} error={errors.email} required>
             <Input error={!!errors.email} type="email" value={form.email} onChange={set('email')} placeholder="jane@example.com" />
           </Field>
-          <Field label={t('field_password')} error={errors.password}>
+          <Field label={t('field_password')} error={errors.password} required>
             <PasswordInput error={!!errors.password} value={form.password} onChange={set('password')} placeholder="••••••••" />
           </Field>
         </div>
+        <ApiErrorBox errors={apiError} />
         <ModalActions>
-          <BtnSecondary onClick={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); }}>{t('cancel')}</BtnSecondary>
+          <BtnSecondary onClick={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); setApiError([]); }}>{t('cancel')}</BtnSecondary>
           <BtnPrimary onClick={handleRegister} disabled={submitting}>
             {submitting ? t('registering') : t('register_user')}
           </BtnPrimary>
@@ -134,7 +139,7 @@ export function UsersPage() {
       <PageHeader
         title={t('nav_users')}
         subtitle={t('users_subtitle')}
-        action={<AddButton onClick={() => { setErrors({}); setForm(EMPTY_FORM); setModalOpen(true); }} label={t('register_user_btn')} />}
+        action={<AddButton onClick={() => { setErrors({}); setApiError([]); setForm(EMPTY_FORM); setModalOpen(true); }} label={t('register_user_btn')} />}
       />
 
       <TableCard>

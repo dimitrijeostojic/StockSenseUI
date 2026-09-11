@@ -16,8 +16,18 @@ export interface RegisterRequest {
   password: string;
   companyName: string;
   pib: string;
-  address: string;
+  address?: string;
+  logoUrl?: string;
 }
+
+export const UNIT_OF_MEASUREMENT: Record<number, string> = {
+  1: 'Piece',
+  2: 'Linear Meter',
+  3: 'Square Meter',
+  4: 'Kilogram',
+  5: 'Box',
+  6: 'Set',
+};
 
 export interface DashboardResponse {
   numberOfProducts: number;
@@ -47,9 +57,11 @@ export interface DashboardProductDto {
 export interface ProductDto {
   publicId: string;
   name: string;
+  sku: string;
   description?: string;
   price: number;
   minimumStockQuantity: number;
+  unitOfMeasure: number;
   actualStockQuantity: number;
   categoryPublicId: string;
   categoryName: string;
@@ -78,6 +90,18 @@ export interface SupplierDto {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+}
+
+export interface SupplierDetailDto {
+  publicId: string;
+  name: string;
+  supplierCode: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
 }
 
 export interface OrderListDto {

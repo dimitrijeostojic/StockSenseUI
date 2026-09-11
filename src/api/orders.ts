@@ -2,7 +2,7 @@ import { apiClient } from './client';
 import type { OrderListDto, OrderDetailDto, PagedResponse } from '../types';
 
 export async function getOrders(params: { pageNumber?: number; pageSize?: number; searchTerm?: string; sortBy?: string; isAscending?: boolean; filterOn?: string; filterQuery?: string } = {}): Promise<PagedResponse<OrderListDto>> {
-  const { data } = await apiClient.get<PagedResponse<OrderListDto>>('/api/order', { params: { pageNumber: 1, pageSize: 1000, isAscending: false, ...params } });
+  const { data } = await apiClient.get<PagedResponse<OrderListDto>>('/api/order', { params: { pageNumber: 1, pageSize: 100, isAscending: false, ...params } });
   return data;
 }
 

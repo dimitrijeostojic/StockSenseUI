@@ -13,6 +13,14 @@ apiClient.interceptors.request.use(config => {
 let isRefreshing = false;
 let queue: Array<(token: string) => void> = [];
 
+export function extractApiErrors(err: unknown): string[] {
+  const data = (err as { response?: { data?: { errors?: Record<string, string>[] } } })?.response?.data;
+  if (Array.isArray(data?.errors) && data.errors.length > 0) {
+    return data.errors.map((e) => e.ErrorMessage ?? e.errorMessage ?? 'Unknown error');
+  }
+  return [];
+}
+
 apiClient.interceptors.response.use(
   res => res,
   async error => {

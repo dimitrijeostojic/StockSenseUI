@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById, getStockEntries } from '../api/products';
 import type { ProductDto, StockEntryDto } from '../types';
-import { formatMoney, formatDate } from '../types';
+import { formatMoney, formatDate, UNIT_OF_MEASUREMENT } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, LoadingState, EmptyState } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -84,6 +84,7 @@ export function ProductDetailPage() {
         </div>
         <div>
           <div style={{ fontSize: 13.5, color: '#52525b' }}>{product.categoryName} · {product.supplierName}</div>
+          <div style={{ fontSize: 12, color: '#a1a1aa', marginTop: 2 }}>SKU: {product.sku}</div>
         </div>
       </div>
 
@@ -95,7 +96,7 @@ export function ProductDetailPage() {
           sub={low ? t('below_minimum') : `${t('min_prefix')}${product.minimumStockQuantity}`}
         />
         <InfoCard label={t('minimum_stock')} value={String(product.minimumStockQuantity)} />
-        <InfoCard label={t('category')} value={product.categoryName} sub={product.supplierName} />
+        <InfoCard label={t('field_unit_of_measurement')} value={UNIT_OF_MEASUREMENT[product.unitOfMeasure] ?? '—'} sub={product.categoryName} />
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, color: '#18181b', marginBottom: 12, letterSpacing: '-0.01em' }}>

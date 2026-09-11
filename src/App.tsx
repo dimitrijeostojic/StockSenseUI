@@ -9,6 +9,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { SuppliersPage } from './pages/SuppliersPage';
+import { SupplierDetailPage } from './pages/SupplierDetailPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { UsersPage } from './pages/UsersPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -45,6 +46,7 @@ function AppRoutes() {
       <Route path="/products/:publicId" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
       <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
       <Route path="/suppliers" element={<ProtectedRoute><SuppliersPage /></ProtectedRoute>} />
+      <Route path="/suppliers/:publicId" element={<ProtectedRoute><SupplierDetailPage /></ProtectedRoute>} />
       <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
       <Route path="/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

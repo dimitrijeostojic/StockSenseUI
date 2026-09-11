@@ -54,12 +54,18 @@ interface FieldProps {
   label: string;
   children: ReactNode;
   error?: string;
+  required?: boolean;
+  optional?: boolean;
 }
 
-export function Field({ label, children, error }: FieldProps) {
+export function Field({ label, children, error, required, optional }: FieldProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: error ? '#dc2626' : '#3f3f46' }}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: error ? '#dc2626' : '#3f3f46' }}>{label}</label>
+        {required && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>*</span>}
+        {optional && <span style={{ fontSize: 10.5, fontWeight: 600, color: '#a1a1aa', background: '#f4f4f5', borderRadius: 4, padding: '1px 5px' }}>optional</span>}
+      </div>
       {children}
       {error && <div style={{ fontSize: 11.5, color: '#dc2626', marginTop: -2 }}>{error}</div>}
     </div>
@@ -114,6 +120,17 @@ export function PasswordInput({ error, style, ...props }: Omit<React.InputHTMLAt
           </svg>
         )}
       </button>
+    </div>
+  );
+}
+
+export function ApiErrorBox({ errors }: { errors: string[] }) {
+  if (!errors.length) return null;
+  return (
+    <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginTop: 16 }}>
+      {errors.map((e, i) => (
+        <div key={i} style={{ fontSize: 12.5, color: '#dc2626', lineHeight: 1.6 }}>{e}</div>
+      ))}
     </div>
   );
 }

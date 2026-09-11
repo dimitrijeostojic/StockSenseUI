@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../api/suppliers';
+import { useNavigate } from 'react-router-dom';
+import { getSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierById } from '../api/suppliers';
 import type { SupplierDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, Pagination } from '../components/Layout';
-import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
+import { extractApiErrors } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface SupplierModalState {
@@ -14,7 +16,11 @@ interface SupplierModalState {
   name: string;
   contactName: string;
   contactEmail: string;
+  supplierCode: string;
   contactPhone: string;
+  address: string;
+  city: string;
+  country: string;
 }
 
 interface Query {
@@ -28,12 +34,14 @@ interface Query {
 export function SuppliersPage() {
   const { showToast } = useToast();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<SupplierModalState | null>(null);
-  const [errors, setErrors] = useState<{ name?: string; contactEmail?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; contactName?: string; contactEmail?: string; supplierCode?: string }>({});
   const [saving, setSaving] = useState(false);
+  const [apiError, setApiError] = useState<string[]>([]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [query, setQuery] = useState<Query>({ pageNumber: 1, pageSize: 10, search: '', sortBy: 'name', isAscending: true });
   const [searchInput, setSearchInput] = useState('');
@@ -72,18 +80,25 @@ export function SuppliersPage() {
 
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const openAdd = () => { setErrors({}); setModal({ open: true, mode: 'add', name: '', contactName: '', contactEmail: '', contactPhone: '' }); };
-  const openEdit = (s: SupplierDto) => { setErrors({}); setModal({ open: true, mode: 'edit', publicId: s.publicId, name: s.name, contactName: s.contactName ?? '', contactEmail: s.contactEmail ?? '', contactPhone: s.contactPhone ?? '' }); };
+  const openAdd = () => { setErrors({}); setApiError([]); setModal({ open: true, mode: 'add', name: '', contactName: '', contactEmail: '', supplierCode: '', contactPhone: '', address: '', city: '', country: '' }); };
+  const openEdit = async (s: SupplierDto) => {
+    setErrors({}); setApiError([]);
+    const full = await getSupplierById(s.publicId);
+    setModal({ open: true, mode: 'edit', publicId: s.publicId, name: full.name, contactName: full.contactName, contactEmail: full.contactEmail, supplierCode: full.supplierCode, contactPhone: full.contactPhone ?? '', address: full.address ?? '', city: full.city ?? '', country: full.country ?? '' });
+  };
 
   const save = async () => {
     if (!modal) return;
-    const errs: { name?: string; contactEmail?: string } = {};
+    const errs: { name?: string; contactName?: string; contactEmail?: string; supplierCode?: string } = {};
     if (!modal.name.trim()) errs.name = t('field_required');
-    if (modal.contactEmail && !emailRe.test(modal.contactEmail)) errs.contactEmail = t('email_invalid');
+    if (!modal.contactName.trim()) errs.contactName = t('field_required');
+    if (!modal.contactEmail.trim()) errs.contactEmail = t('field_required');
+    else if (!emailRe.test(modal.contactEmail)) errs.contactEmail = t('email_invalid');
+    if (!modal.supplierCode.trim()) errs.supplierCode = t('field_required');
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
-      const body = { name: modal.name, contactName: modal.contactName || undefined, contactEmail: modal.contactEmail || undefined, contactPhone: modal.contactPhone || undefined };
+      const body = { name: modal.name, contactName: modal.contactName, contactEmail: modal.contactEmail, supplierCode: modal.supplierCode, contactPhone: modal.contactPhone || undefined, address: modal.address || undefined, city: modal.city || undefined, country: modal.country || undefined };
       if (modal.mode === 'add') {
         await createSupplier(body);
         showToast(t('supplier_added'));
@@ -95,8 +110,10 @@ export function SuppliersPage() {
         setModal(null);
         await load();
       }
-    } catch {
-      showToast(t('supplier_save_failed'));
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setApiError(errs);
+      else showToast(t('supplier_save_failed'));
     } finally {
       setSaving(false);
     }
@@ -161,11 +178,12 @@ export function SuppliersPage() {
 
         {suppliers.map(s => (
           <div key={s.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 580 : undefined }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{s.name}</div>
-            <div style={{ fontSize: 13, color: '#52525b' }}>{s.contactName || '—'}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+            <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactName || '—'}</div>
             <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactEmail || '—'}</div>
-            <div style={{ fontSize: 13, color: '#52525b' }}>{s.contactPhone || '—'}</div>
+            <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactPhone || '—'}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <ActionBtn onClick={() => navigate(`/suppliers/${s.publicId}`)}>{t('view')}</ActionBtn>
               <ActionBtn onClick={() => openEdit(s)}>{t('edit')}</ActionBtn>
               <ActionBtn variant="danger" onClick={() => setConfirmId(s.publicId)}>{t('delete')}</ActionBtn>
             </div>
@@ -192,30 +210,49 @@ export function SuppliersPage() {
         message={t('cannot_undo')}
       />
 
-      <Modal open={!!modal} onClose={() => setModal(null)} width={440}>
+      <Modal open={!!modal} onClose={() => { setModal(null); setApiError([]); }} width={560}>
         {modal && (
           <>
             <ModalTitle>{modal.mode === 'add' ? t('add_supplier_title') : t('edit_supplier_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('field_company')} error={errors.name}>
-                <Input error={!!errors.name} placeholder="e.g. NovaSupply" value={modal.name}
-                  onChange={e => { setModal(prev => ({ ...prev!, name: e.target.value })); setErrors(prev => ({ ...prev, name: undefined })); }} />
-              </Field>
-              <Field label={t('field_contact')}>
-                <Input placeholder="e.g. Ana Petrović" value={modal.contactName} onChange={e => setModal(prev => ({ ...prev!, contactName: e.target.value }))} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Field label={t('field_company')} error={errors.name} required>
+                  <Input error={!!errors.name} placeholder="e.g. NovaSupply" value={modal.name}
+                    onChange={e => { setModal(prev => ({ ...prev!, name: e.target.value })); setErrors(prev => ({ ...prev, name: undefined })); }} />
+                </Field>
+                <Field label={t('field_supplier_code')} error={errors.supplierCode} required>
+                  <Input error={!!errors.supplierCode} placeholder="e.g. SUP-001" value={modal.supplierCode}
+                    onChange={e => { setModal(prev => ({ ...prev!, supplierCode: e.target.value })); setErrors(prev => ({ ...prev, supplierCode: undefined })); }} />
+                </Field>
+              </div>
+              <Field label={t('field_contact')} error={errors.contactName} required>
+                <Input error={!!errors.contactName} placeholder="e.g. Ana Petrović" value={modal.contactName}
+                  onChange={e => { setModal(prev => ({ ...prev!, contactName: e.target.value })); setErrors(prev => ({ ...prev, contactName: undefined })); }} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <Field label={t('email')} error={errors.contactEmail}>
+                <Field label={t('email')} error={errors.contactEmail} required>
                   <Input error={!!errors.contactEmail} type="email" placeholder="contact@co.com" value={modal.contactEmail}
                     onChange={e => { setModal(prev => ({ ...prev!, contactEmail: e.target.value })); setErrors(prev => ({ ...prev, contactEmail: undefined })); }} />
                 </Field>
-                <Field label={t('phone')}>
+                <Field label={t('phone')} optional>
                   <Input placeholder="+1..." value={modal.contactPhone} onChange={e => setModal(prev => ({ ...prev!, contactPhone: e.target.value }))} />
                 </Field>
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                <Field label={t('field_address')} optional>
+                  <Input placeholder="e.g. 123 Main St" value={modal.address} onChange={e => setModal(prev => ({ ...prev!, address: e.target.value }))} />
+                </Field>
+                <Field label={t('field_city')} optional>
+                  <Input placeholder="e.g. Belgrade" value={modal.city} onChange={e => setModal(prev => ({ ...prev!, city: e.target.value }))} />
+                </Field>
+                <Field label={t('field_country')} optional>
+                  <Input placeholder="e.g. Serbia" value={modal.country} onChange={e => setModal(prev => ({ ...prev!, country: e.target.value }))} />
+                </Field>
+              </div>
             </div>
+            <ApiErrorBox errors={apiError} />
             <ModalActions>
-              <BtnSecondary onClick={() => setModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnSecondary onClick={() => { setModal(null); setApiError([]); }}>{t('cancel')}</BtnSecondary>
               <BtnPrimary onClick={save} disabled={saving}>{t('save_supplier')}</BtnPrimary>
             </ModalActions>
           </>

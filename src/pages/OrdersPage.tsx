@@ -8,7 +8,8 @@ import { formatDate, formatMoney } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, StatusBadge, Pagination } from '../components/Layout';
-import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
+import { extractApiErrors } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 type StatusFilter = '' | 'Pending' | 'Confirmed' | 'Received' | 'Cancelled';
@@ -58,6 +59,7 @@ export function OrdersPage() {
   const [newOrderErrors, setNewOrderErrors] = useState<{ items?: string }>({});
   const [editErrors, setEditErrors] = useState<{ orderDate?: string }>({});
   const [saving, setSaving] = useState(false);
+  const [apiError, setApiError] = useState<string[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editModal, setEditModal] = useState<EditOrderModalState | null>(null);
@@ -143,6 +145,7 @@ export function OrdersPage() {
 
   const openAdd = () => {
     setNewOrderErrors({});
+    setApiError([]);
     setModal({
       open: true,
       supplierId: suppliers[0]?.publicId ?? '',
@@ -166,8 +169,10 @@ export function OrdersPage() {
       showToast(t('order_created'));
       setModal(null);
       setQuery(q => ({ ...q, pageNumber: 1 }));
-    } catch {
-      showToast(t('order_create_failed'));
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setApiError(errs);
+      else showToast(t('order_create_failed'));
     } finally {
       setSaving(false);
     }
@@ -198,6 +203,7 @@ export function OrdersPage() {
     const detail = await getDetail(o.publicId);
     if (!detail) { showToast(t('order_load_failed')); return; }
     setEditErrors({});
+    setApiError([]);
     setEditModal({
       publicId: o.publicId,
       supplierId: detail.supplierPublicId,
@@ -223,8 +229,10 @@ export function OrdersPage() {
       setEditModal(null);
       setOrderDetails(prev => { const next = { ...prev }; delete next[editModal.publicId]; return next; });
       await load();
-    } catch {
-      showToast(t('order_update_failed'));
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setApiError(errs);
+      else showToast(t('order_update_failed'));
     } finally {
       setSaving(false);
     }
@@ -345,26 +353,27 @@ export function OrdersPage() {
       />
 
       {/* Edit Order Modal */}
-      <Modal open={!!editModal} onClose={() => setEditModal(null)} width={460}>
+      <Modal open={!!editModal} onClose={() => { setEditModal(null); setApiError([]); }} width={460}>
         {editModal && (
           <>
             <ModalTitle>{t('edit_order_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('supplier')}>
+              <Field label={t('supplier')} required>
                 <Select value={editModal.supplierId} onChange={e => setEditModal(prev => ({ ...prev!, supplierId: e.target.value }))}>
                   {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
                 </Select>
               </Field>
-              <Field label={t('order_date_field')} error={editErrors.orderDate}>
+              <Field label={t('order_date_field')} error={editErrors.orderDate} required>
                 <Input error={!!editErrors.orderDate} type="date" value={editModal.orderDate}
                   onChange={e => { setEditModal(prev => ({ ...prev!, orderDate: e.target.value })); setEditErrors({}); }} />
               </Field>
-              <Field label={t('notes')}>
+              <Field label={t('notes')} optional>
                 <Input placeholder="Optional note" value={editModal.notes} onChange={e => setEditModal(prev => ({ ...prev!, notes: e.target.value }))} />
               </Field>
             </div>
+            <ApiErrorBox errors={apiError} />
             <ModalActions>
-              <BtnSecondary onClick={() => setEditModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnSecondary onClick={() => { setEditModal(null); setApiError([]); }}>{t('cancel')}</BtnSecondary>
               <BtnPrimary onClick={saveEdit} disabled={saving}>{t('save_changes')}</BtnPrimary>
             </ModalActions>
           </>
@@ -438,17 +447,17 @@ export function OrdersPage() {
       })()}
 
       {/* New Order Modal */}
-      <Modal open={!!modal} onClose={() => setModal(null)} width={560}>
+      <Modal open={!!modal} onClose={() => { setModal(null); setApiError([]); }} width={560}>
         {modal && (
           <>
             <ModalTitle>{t('new_order_title')}</ModalTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              <Field label={t('supplier')}>
+              <Field label={t('supplier')} required>
                 <Select value={modal.supplierId} onChange={e => setModal(prev => ({ ...prev!, supplierId: e.target.value }))}>
                   {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
                 </Select>
               </Field>
-              <Field label={t('notes')}>
+              <Field label={t('notes')} optional>
                 <Input placeholder="Optional note" value={modal.notes} onChange={e => setModal(prev => ({ ...prev!, notes: e.target.value }))} />
               </Field>
             </div>
@@ -489,8 +498,9 @@ export function OrdersPage() {
               <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatMoney(orderModalTotal())}</div>
             </div>
 
+            <ApiErrorBox errors={apiError} />
             <ModalActions>
-              <BtnSecondary onClick={() => setModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnSecondary onClick={() => { setModal(null); setApiError([]); }}>{t('cancel')}</BtnSecondary>
               <BtnPrimary onClick={saveOrder} disabled={saving}>{t('create_order')}</BtnPrimary>
             </ModalActions>
           </>

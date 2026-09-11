@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api/categories';
-import { getProducts } from '../api/products';
-import type { CategoryDto, ProductDto } from '../types';
+import type { CategoryDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, LoadingState } from '../components/Layout';
-import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal } from '../components/Modal';
+import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
+import { extractApiErrors } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface CategoryModalState {
@@ -20,26 +20,23 @@ export function CategoriesPage() {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [products, setProducts] = useState<ProductDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<CategoryModalState | null>(null);
   const [errors, setErrors] = useState<{ name?: string }>({});
   const [saving, setSaving] = useState(false);
+  const [apiError, setApiError] = useState<string[]>([]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
-    const [cats, prods] = await Promise.all([getCategories(), getProducts()]);
+    const cats = await getCategories();
     setCategories(cats);
-    setProducts(prods.items);
   }, []);
 
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
 
-  const productCount = (catId: string) => products.filter(p => p.categoryPublicId === catId).length;
-
-  const openAdd = () => { setErrors({}); setModal({ open: true, mode: 'add', name: '', description: '' }); };
-  const openEdit = (c: CategoryDto) => { setErrors({}); setModal({ open: true, mode: 'edit', publicId: c.publicId, name: c.name, description: c.description ?? '' }); };
+  const openAdd = () => { setErrors({}); setApiError([]); setModal({ open: true, mode: 'add', name: '', description: '' }); };
+  const openEdit = (c: CategoryDto) => { setErrors({}); setApiError([]); setModal({ open: true, mode: 'edit', publicId: c.publicId, name: c.name, description: c.description ?? '' }); };
 
   const save = async () => {
     if (!modal) return;
@@ -57,8 +54,10 @@ export function CategoriesPage() {
       }
       setModal(null);
       await load();
-    } catch {
-      showToast(t('category_save_failed'));
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setApiError(errs);
+      else showToast(t('category_save_failed'));
     } finally {
       setSaving(false);
     }
@@ -87,12 +86,7 @@ export function CategoriesPage() {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'repeat(3,1fr)', gap: 16 }}>
         {categories.map(c => (
           <div key={c.publicId} style={{ background: '#ffffff', border: '1px solid #ececf0', borderRadius: 16, padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{c.name}</div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 100, background: '#f3eefe', color: '#6d28d9', flexShrink: 0, marginLeft: 8 }}>
-                {productCount(c.publicId)} {t('items_suffix')}
-              </div>
-            </div>
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{c.name}</div>
             <div style={{ fontSize: 13, color: '#71717a', marginTop: 8, minHeight: 36 }}>{c.description || '—'}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button onClick={() => openEdit(c)}
@@ -120,21 +114,22 @@ export function CategoriesPage() {
         message={t('cannot_undo')}
       />
 
-      <Modal open={!!modal} onClose={() => setModal(null)} width={400}>
+      <Modal open={!!modal} onClose={() => { setModal(null); setApiError([]); }} width={400}>
         {modal && (
           <>
             <ModalTitle>{modal.mode === 'add' ? t('add_category_title') : t('edit_category_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Field label={t('name')} error={errors.name}>
+              <Field label={t('name')} error={errors.name} required>
                 <Input error={!!errors.name} placeholder="e.g. Audio" value={modal.name}
                   onChange={e => { setModal(prev => ({ ...prev!, name: e.target.value })); setErrors(prev => ({ ...prev, name: undefined })); }} />
               </Field>
-              <Field label={t('description')}>
+              <Field label={t('description')} optional>
                 <Input placeholder="Optional description" value={modal.description} onChange={e => setModal(prev => ({ ...prev!, description: e.target.value }))} />
               </Field>
             </div>
+            <ApiErrorBox errors={apiError} />
             <ModalActions>
-              <BtnSecondary onClick={() => setModal(null)}>{t('cancel')}</BtnSecondary>
+              <BtnSecondary onClick={() => { setModal(null); setApiError([]); }}>{t('cancel')}</BtnSecondary>
               <BtnPrimary onClick={save} disabled={saving}>{t('save_category')}</BtnPrimary>
             </ModalActions>
           </>
