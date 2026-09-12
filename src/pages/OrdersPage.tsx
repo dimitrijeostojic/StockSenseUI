@@ -66,16 +66,18 @@ export function OrdersPage() {
   const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setQuery(q => ({ ...q, search: searchInput, pageNumber: 1 })), 400);
+    const t = setTimeout(() => setQuery(q => q.search === searchInput ? q : { ...q, search: searchInput, pageNumber: 1 }), 400);
     return () => clearTimeout(t);
   }, [searchInput]);
 
 
-  const loadDropdowns = useCallback(async () => {
+  const loadDropdowns = async () => {
+    if (products.length > 0 && suppliers.length > 0) return;
     const [prodRes, supRes] = await Promise.all([getProducts(), getSuppliers()]);
     setProducts(prodRes.items);
     setSuppliers(supRes.items);
-  }, []);
+    return { products: prodRes.items, suppliers: supRes.items };
+  };
 
   const load = useCallback(async () => {
     const res = await getOrders({
@@ -91,19 +93,20 @@ export function OrdersPage() {
     setTotalCount(res.totalCount);
   }, [query, statusFilter]);
 
-  // Load dropdowns once on mount
-  useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
-
   // Load orders on mount and query change
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
 
-  // Reorder shortcut from dashboard
+  // Load dropdowns + open modal if coming from dashboard reorder shortcut
   useEffect(() => {
     const reorderProductId = (location.state as { reorderProductId?: string } | null)?.reorderProductId;
-    if (!reorderProductId || loading || !products.length || !suppliers.length) return;
-    setModal({ open: true, supplierId: suppliers[0].publicId, notes: '', items: [{ productId: reorderProductId, quantity: '1' }] });
-    window.history.replaceState({}, '');
-  }, [loading, location.state, products, suppliers]);
+    if (!reorderProductId) return;
+    loadDropdowns().then(res => {
+      const sups = res?.suppliers ?? suppliers;
+      setModal({ open: true, supplierId: sups[0]?.publicId ?? '', notes: '', items: [{ productId: reorderProductId, quantity: '1' }] });
+      window.history.replaceState({}, '');
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Open order detail from dashboard
   useEffect(() => {
@@ -143,14 +146,17 @@ export function OrdersPage() {
     return detail.orderItems.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
   };
 
-  const openAdd = () => {
+  const openAdd = async () => {
     setNewOrderErrors({});
     setApiError([]);
+    const res = await loadDropdowns();
+    const sups = res?.suppliers ?? suppliers;
+    const prods = res?.products ?? products;
     setModal({
       open: true,
-      supplierId: suppliers[0]?.publicId ?? '',
+      supplierId: sups[0]?.publicId ?? '',
       notes: '',
-      items: [{ productId: products[0]?.publicId ?? '', quantity: '1' }],
+      items: [{ productId: prods[0]?.publicId ?? '', quantity: '1' }],
     });
   };
 

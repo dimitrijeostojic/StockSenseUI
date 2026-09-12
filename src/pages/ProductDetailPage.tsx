@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById, getStockEntries } from '../api/products';
 import type { ProductDto, StockEntryDto } from '../types';
-import { formatMoney, formatDate, UNIT_OF_MEASUREMENT } from '../types';
+import { formatMoney, formatDate, UOM_KEYS } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, LoadingState, EmptyState } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -96,7 +96,7 @@ export function ProductDetailPage() {
           sub={low ? t('below_minimum') : `${t('min_prefix')}${product.minimumStockQuantity}`}
         />
         <InfoCard label={t('minimum_stock')} value={String(product.minimumStockQuantity)} />
-        <InfoCard label={t('field_unit_of_measurement')} value={UNIT_OF_MEASUREMENT[product.unitOfMeasure] ?? '—'} sub={product.categoryName} />
+        <InfoCard label={t('field_unit_of_measurement')} value={UOM_KEYS[product.unitOfMeasurement] ? t(UOM_KEYS[product.unitOfMeasurement]) : '—'} sub={product.categoryName} />
       </div>
 
       <div style={{ fontSize: 16, fontWeight: 800, color: '#18181b', marginBottom: 12, letterSpacing: '-0.01em' }}>

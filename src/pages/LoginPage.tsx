@@ -18,8 +18,9 @@ export function LoginPage() {
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [regForm, setRegForm] = useState({
     firstName: '', lastName: '', username: '', email: '', password: '',
-    companyName: '', pib: '', address: '', logoUrl: '',
+    companyName: '', pib: '', address: '',
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -40,7 +41,7 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await register(regForm);
+      await register({ ...regForm, logo: logoFile });
       setMode('login');
       setLoginForm(prev => ({ ...prev, email: regForm.email }));
     } catch {
@@ -165,7 +166,6 @@ export function LoginPage() {
                 { label: 'Company name', key: 'companyName', placeholder: 'Acme Inc.', type: 'text', required: true },
                 { label: 'Tax ID (PIB)', key: 'pib', placeholder: '123456789', type: 'text', required: true },
                 { label: 'Address', key: 'address', placeholder: '123 Main St', type: 'text', required: false },
-                { label: 'Logo URL', key: 'logoUrl', placeholder: 'https://...', type: 'url', required: false },
               ].map(f => (
                 <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -181,6 +181,16 @@ export function LoginPage() {
                     style={{ height: 38, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13, fontFamily: 'inherit', background: '#fafafa', color: '#18181b', width: '100%' }} />
                 </div>
               ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Logo</label>
+                  <span style={{ fontSize: 10.5, fontWeight: 600, color: '#a1a1aa', background: '#f4f4f5', borderRadius: 4, padding: '1px 5px' }}>optional</span>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, height: 38, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13, fontFamily: 'inherit', background: '#fafafa', color: logoFile ? '#18181b' : '#a1a1aa', cursor: 'pointer', overflow: 'hidden' }}>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setLogoFile(e.target.files?.[0] ?? null)} />
+                  {logoFile ? logoFile.name : 'Choose image…'}
+                </label>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Password</label>

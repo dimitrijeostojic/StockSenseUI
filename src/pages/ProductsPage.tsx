@@ -12,7 +12,7 @@ import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, 
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
 import { extractApiErrors } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { UNIT_OF_MEASUREMENT } from '../types';
+import { UOM_KEYS } from '../types';
 
 const SWATCHES = ['#6d28d9', '#2563eb', '#16a34a', '#d97706', '#db2777', '#0891b2'];
 
@@ -83,16 +83,12 @@ export function ProductsPage() {
 
   // Debounce search
   useEffect(() => {
-    const t = setTimeout(() => setQuery(q => ({ ...q, search: searchInput, pageNumber: 1 })), 400);
+    const t = setTimeout(() => setQuery(q => q.search === searchInput ? q : { ...q, search: searchInput, pageNumber: 1 }), 400);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Load dropdowns once
   useEffect(() => {
-    Promise.all([getCategories(), getSuppliers()]).then(([cats, sups]) => {
-      setCategories(cats);
-      setSuppliers(sups.items);
-    });
+    getCategories().then(setCategories);
   }, []);
 
   const load = useCallback(async () => {
@@ -124,20 +120,30 @@ export function ProductsPage() {
     );
   };
 
-  const openAdd = () => {
+  const openAdd = async () => {
     setProductErrors({});
     setApiError([]);
-    setProductModal({ ...emptyProduct, categoryId: categories[0]?.publicId ?? '', supplierId: suppliers[0]?.publicId ?? '' });
+    if (suppliers.length === 0) {
+      const sups = await getSuppliers();
+      setSuppliers(sups.items);
+      setProductModal({ ...emptyProduct, categoryId: categories[0]?.publicId ?? '', supplierId: sups.items[0]?.publicId ?? '' });
+    } else {
+      setProductModal({ ...emptyProduct, categoryId: categories[0]?.publicId ?? '', supplierId: suppliers[0]?.publicId ?? '' });
+    }
   };
 
-  const openEdit = (p: ProductDto) => {
+  const openEdit = async (p: ProductDto) => {
     setProductErrors({});
     setApiError([]);
+    if (suppliers.length === 0) {
+      const sups = await getSuppliers();
+      setSuppliers(sups.items);
+    }
     setProductModal({
       open: true, mode: 'edit', publicId: p.publicId,
       name: p.name, sku: p.sku, description: p.description ?? '',
       price: String(p.price), minimumStockQuantity: String(p.minimumStockQuantity),
-      unitOfMeasurement: String(p.unitOfMeasure ?? 1),
+      unitOfMeasurement: String(p.unitOfMeasurement ?? 1),
       categoryId: p.categoryPublicId, supplierId: p.supplierPublicId,
     });
   };
@@ -382,8 +388,8 @@ export function ProductsPage() {
               </div>
               <Field label={t('field_unit_of_measurement')} required>
                 <Select value={pm.unitOfMeasurement} onChange={e => setProductModal(prev => ({ ...prev!, unitOfMeasurement: e.target.value }))}>
-                  {Object.entries(UNIT_OF_MEASUREMENT).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
+                  {Object.entries(UOM_KEYS).map(([val, key]) => (
+                    <option key={val} value={val}>{t(key)}</option>
                   ))}
                 </Select>
               </Field>

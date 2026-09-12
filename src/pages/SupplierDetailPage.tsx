@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSupplierById } from '../api/suppliers';
 import { getProducts } from '../api/products';
-import type { SupplierDetailDto, ProductDto } from '../types';
-import { formatMoney } from '../types';
+import { getOrders } from '../api/orders';
+import type { SupplierDetailDto, ProductDto, OrderListDto } from '../types';
+import { formatMoney, formatDate, statusColors } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, LoadingState, EmptyState, TableCard } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -23,24 +24,30 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
+const STATUS_LABELS: Record<number, string> = { 1: 'Pending', 2: 'Confirmed', 3: 'Received', 4: 'Cancelled' };
+
 export function SupplierDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [supplier, setSupplier] = useState<SupplierDetailDto | null>(null);
   const [products, setProducts] = useState<ProductDto[]>([]);
+  const [orders, setOrders] = useState<OrderListDto[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
+  const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
 
   useEffect(() => {
     if (!publicId) return;
     Promise.all([
       getSupplierById(publicId),
       getProducts({ filterOn: 'supplierPublicId', filterQuery: publicId, pageSize: 100 }),
+      getOrders({ filterOn: 'SupplierPublicId', filterQuery: publicId, pageSize: 100 }),
     ])
-      .then(([sup, prod]) => {
+      .then(([sup, prod, ord]) => {
         setSupplier(sup);
         setProducts(prod.items);
+        setOrders(ord.items);
       })
       .finally(() => setLoading(false));
   }, [publicId]);
@@ -50,6 +57,7 @@ export function SupplierDetailPage() {
 
   const hasLocation = supplier.address || supplier.city || supplier.country;
   const PROD_GRID = isMobile ? '1fr 1fr 1fr' : '2fr 1fr 1fr 1fr 1fr';
+  const ORD_GRID = isMobile ? '1fr 1fr' : '1.5fr 1fr 1fr';
 
   return (
     <>
@@ -88,6 +96,42 @@ export function SupplierDetailPage() {
           </div>
         </>
       )}
+
+      <SectionTitle>{t('supplier_orders')}</SectionTitle>
+      <TableCard>
+        <div style={{ display: 'grid', gridTemplateColumns: ORD_GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 300 : undefined }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('date')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('status')}</div>
+          {!isMobile && <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('actions')}</div>}
+        </div>
+
+        {orders.length === 0 && <EmptyState message={t('no_supplier_orders')} />}
+
+        {orders.map(o => {
+          const sc = statusColors(o.orderStatus);
+          const statusLabel = STATUS_LABELS[o.orderStatus] ?? String(o.orderStatus);
+          return (
+            <div key={o.publicId} style={{ display: 'grid', gridTemplateColumns: ORD_GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 300 : undefined }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{formatDate(o.orderDate, locale)}</div>
+              <div>
+                <span style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px', borderRadius: 100, background: sc.bg, color: sc.color }}>
+                  {statusLabel}
+                </span>
+              </div>
+              {!isMobile && (
+                <div>
+                  <button
+                    onClick={() => navigate('/orders', { state: { openOrderId: o.publicId } })}
+                    style={{ height: 30, padding: '0 12px', borderRadius: 8, border: '1px solid #e4e4e7', background: '#ffffff', color: '#52525b', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    {t('btn_details')}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </TableCard>
 
       <SectionTitle>{t('supplier_products')}</SectionTitle>
       <TableCard>

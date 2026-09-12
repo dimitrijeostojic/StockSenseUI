@@ -47,7 +47,7 @@ export function SuppliersPage() {
   const [searchInput, setSearchInput] = useState('');
 
   useEffect(() => {
-    const timer = setTimeout(() => setQuery(q => ({ ...q, search: searchInput, pageNumber: 1 })), 400);
+    const timer = setTimeout(() => setQuery(q => q.search === searchInput ? q : { ...q, search: searchInput, pageNumber: 1 }), 400);
     return () => clearTimeout(timer);
   }, [searchInput]);
 

@@ -148,6 +148,8 @@ export const sr: Record<TranslationKey, string> = {
   supplier_location_info: 'Lokacija',
   supplier_products: 'Proizvodi ovog dobavljača',
   no_supplier_products: 'Nema proizvoda povezanih sa ovim dobavljačem.',
+  supplier_orders: 'Narudžbine ovog dobavljača',
+  no_supplier_orders: 'Nema narudžbina za ovog dobavljača.',
   supplier_name_required: 'Naziv dobavljača je obavezan',
   supplier_added: 'Dobavljač dodat',
   supplier_updated: 'Dobavljač ažuriran',
@@ -270,6 +272,11 @@ export const sr: Record<TranslationKey, string> = {
   profile_last_name: 'Prezime',
   profile_username: 'Korisničko ime',
   profile_company: 'Kompanija',
+
+  // Company info
+  company_info: 'Informacije o kompaniji',
+  company_updated: 'Kompanija ažurirana',
+  company_update_failed: 'Greška pri ažuriranju kompanije',
 
   // Change password
   change_password: 'Promena lozinke',

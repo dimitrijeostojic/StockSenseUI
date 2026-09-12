@@ -6,9 +6,12 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import type { TranslationKey } from '../locales/en';
 import { changePassword } from '../api/auth';
 import { getMyUser } from '../api/users';
+import { getMyTenant, updateTenant } from '../api/tenant';
+import type { TenantDto } from '../api/tenant';
 import type { GetMyUserResponse } from '../types';
 import { useToast } from '../contexts/ToastContext';
-import { Modal, ModalTitle, ModalActions, Field, PasswordInput, BtnPrimary, BtnSecondary } from './Modal';
+import { extractApiErrors } from '../api/client';
+import { Modal, ModalTitle, ModalActions, Field, Input, PasswordInput, BtnPrimary, BtnSecondary, ApiErrorBox } from './Modal';
 
 const BASE_NAV_ITEMS: { to: string; labelKey: TranslationKey; icon: ReactNode }[] = [
   {
@@ -76,7 +79,7 @@ const ADMIN_NAV_ITEM: { to: string; labelKey: TranslationKey; icon: ReactNode } 
 };
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { logout, user, isAdmin } = useAuth();
+  const { logout, user, isAdmin, updateUser } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -91,6 +94,14 @@ export function Layout({ children }: { children: ReactNode }) {
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
   const [pwErrors, setPwErrors] = useState<{ currentPassword?: string; newPassword?: string; confirmNewPassword?: string }>({});
   const [pwSaving, setPwSaving] = useState(false);
+  const [companyModal, setCompanyModal] = useState(false);
+  const [tenant, setTenant] = useState<TenantDto | null>(null);
+  const [tenantLoading, setTenantLoading] = useState(false);
+  const [tenantForm, setTenantForm] = useState({ name: '', address: '' });
+  const [tenantLogoFile, setTenantLogoFile] = useState<File | null>(null);
+  const [tenantErrors, setTenantErrors] = useState<{ name?: string }>({});
+  const [tenantApiErrors, setTenantApiErrors] = useState<string[]>([]);
+  const [tenantSaving, setTenantSaving] = useState(false);
 
   const handleChangePassword = async () => {
     const errs: { currentPassword?: string; newPassword?: string; confirmNewPassword?: string } = {};
@@ -131,6 +142,41 @@ export function Layout({ children }: { children: ReactNode }) {
     setMyUserLoading(true);
     getMyUser().then(setMyUser).catch(() => {}).finally(() => setMyUserLoading(false));
     if (isMobile) setSidebarOpen(false);
+  };
+
+  const openCompanyModal = () => {
+    setProfileMenuOpen(false);
+    setTenant(null);
+    setTenantErrors({});
+    setTenantApiErrors([]);
+    setTenantLogoFile(null);
+    setCompanyModal(true);
+    setTenantLoading(true);
+    getMyTenant().then(ten => {
+      setTenant(ten);
+      setTenantForm({ name: ten.name, address: ten.address ?? '' });
+    }).catch(() => {}).finally(() => setTenantLoading(false));
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const saveTenant = async () => {
+    if (!tenantForm.name.trim()) { setTenantErrors({ name: t('field_required') }); return; }
+    setTenantErrors({});
+    setTenantApiErrors([]);
+    setTenantSaving(true);
+    try {
+      const updated = await updateTenant({ name: tenantForm.name, address: tenantForm.address || undefined, logo: tenantLogoFile });
+      setTenant(updated);
+      updateUser({ tenantName: updated.name });
+      showToast(t('company_updated'));
+      setCompanyModal(false);
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setTenantApiErrors(errs);
+      else showToast(t('company_update_failed'));
+    } finally {
+      setTenantSaving(false);
+    }
   };
 
   const handleLogout = () => {
@@ -272,6 +318,24 @@ export function Layout({ children }: { children: ReactNode }) {
                     <path d="M5,7 V5 a3,3 0 0,1 6,0 V7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                   {t('change_password')}
+                </button>
+                <button
+                  onClick={openCompanyModal}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                    padding: '9px 12px', border: 'none', background: 'transparent',
+                    borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    color: '#18181b', fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f4f4f5')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <svg width="15" height="15" viewBox="0 0 18 18" style={{ color: '#71717a', flexShrink: 0 }}>
+                    <rect x="2" y="8" width="14" height="9" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M5,8 V6 a4,4 0 0,1 8,0 V8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1="9" y1="11" x2="9" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  {t('company_info')}
                 </button>
               </div>
             </>
@@ -418,6 +482,64 @@ export function Layout({ children }: { children: ReactNode }) {
         <ModalActions>
           <BtnSecondary onClick={() => setAccountModal(false)}>{t('close')}</BtnSecondary>
           <BtnPrimary onClick={() => { setAccountModal(false); openPwModal(); }}>{t('change_password')}</BtnPrimary>
+        </ModalActions>
+      </Modal>
+
+      <Modal open={companyModal} onClose={() => setCompanyModal(false)} width={440}>
+        <ModalTitle>{t('company_info')}</ModalTitle>
+        {tenantLoading ? (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: '#a1a1aa', fontSize: 13 }}>{t('loading')}</div>
+        ) : isAdmin ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#fafafa', borderRadius: 10, border: '1px solid #ececf0', overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#71717a' }}>{t('tax_id')}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#18181b' }}>{tenant?.pib ?? '—'}</span>
+              </div>
+            </div>
+            <Field label={t('company_name')} error={tenantErrors.name} required>
+              <Input error={!!tenantErrors.name} placeholder="e.g. Acme Corp" value={tenantForm.name}
+                onChange={e => { setTenantForm(f => ({ ...f, name: e.target.value })); setTenantErrors({}); }} />
+            </Field>
+            <Field label={t('address')} optional>
+              <Input placeholder="e.g. 123 Main St" value={tenantForm.address}
+                onChange={e => setTenantForm(f => ({ ...f, address: e.target.value }))} />
+            </Field>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#3f3f46' }}>Logo</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: '#a1a1aa', background: '#f4f4f5', borderRadius: 4, padding: '1px 5px' }}>{t('saving') === t('saving') ? 'optional' : 'optional'}</span>
+              </div>
+              {tenant?.logo && !tenantLogoFile && (
+                <img src={`data:image/png;base64,${tenant.logo}`} alt="logo" style={{ height: 48, objectFit: 'contain', borderRadius: 8, border: '1px solid #ececf0', background: '#fafafa', padding: 4 }} />
+              )}
+              {tenantLogoFile && (
+                <img src={URL.createObjectURL(tenantLogoFile)} alt="preview" style={{ height: 48, objectFit: 'contain', borderRadius: 8, border: '1px solid #ececf0', background: '#fafafa', padding: 4 }} />
+              )}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, height: 38, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13, fontFamily: 'inherit', background: '#fafafa', color: tenantLogoFile ? '#18181b' : '#a1a1aa', cursor: 'pointer', overflow: 'hidden' }}>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setTenantLogoFile(e.target.files?.[0] ?? null)} />
+                {tenantLogoFile ? tenantLogoFile.name : 'Choose image…'}
+              </label>
+            </div>
+            <ApiErrorBox errors={tenantApiErrors} />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#fafafa', borderRadius: 10, border: '1px solid #ececf0', overflow: 'hidden', marginTop: 16 }}>
+            {[
+              { label: t('company_name'), value: tenant?.name ?? '—' },
+              { label: t('tax_id'), value: tenant?.pib ?? '—' },
+              { label: t('address'), value: tenant?.address ?? '—' },
+            ].map((row, i, arr) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: i < arr.length - 1 ? '1px solid #ececf0' : 'none' }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#71717a' }}>{row.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#18181b' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <ModalActions>
+          <BtnSecondary onClick={() => setCompanyModal(false)}>{t(isAdmin ? 'cancel' : 'close')}</BtnSecondary>
+          {isAdmin && <BtnPrimary onClick={saveTenant} disabled={tenantSaving}>{tenantSaving ? t('saving') : t('save')}</BtnPrimary>}
         </ModalActions>
       </Modal>
 

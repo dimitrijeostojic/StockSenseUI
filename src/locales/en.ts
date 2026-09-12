@@ -146,6 +146,8 @@ export const en = {
   supplier_location_info: 'Location',
   supplier_products: 'Products from this supplier',
   no_supplier_products: 'No products linked to this supplier.',
+  supplier_orders: 'Orders from this supplier',
+  no_supplier_orders: 'No orders for this supplier.',
   supplier_name_required: 'Supplier name is required',
   supplier_added: 'Supplier added',
   supplier_updated: 'Supplier updated',
@@ -268,6 +270,11 @@ export const en = {
   profile_last_name: 'Last name',
   profile_username: 'Username',
   profile_company: 'Company',
+
+  // Company info
+  company_info: 'Company Info',
+  company_updated: 'Company updated',
+  company_update_failed: 'Failed to update company',
 
   // Change password
   change_password: 'Change Password',

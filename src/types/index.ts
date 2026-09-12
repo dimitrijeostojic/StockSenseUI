@@ -17,7 +17,7 @@ export interface RegisterRequest {
   companyName: string;
   pib: string;
   address?: string;
-  logoUrl?: string;
+  logo?: File | null;
 }
 
 export const UNIT_OF_MEASUREMENT: Record<number, string> = {
@@ -27,6 +27,15 @@ export const UNIT_OF_MEASUREMENT: Record<number, string> = {
   4: 'Kilogram',
   5: 'Box',
   6: 'Set',
+};
+
+export const UOM_KEYS: Record<number, 'unit_piece' | 'unit_linear_meter' | 'unit_square_meter' | 'unit_kilogram' | 'unit_box' | 'unit_set'> = {
+  1: 'unit_piece',
+  2: 'unit_linear_meter',
+  3: 'unit_square_meter',
+  4: 'unit_kilogram',
+  5: 'unit_box',
+  6: 'unit_set',
 };
 
 export interface DashboardResponse {
@@ -61,7 +70,7 @@ export interface ProductDto {
   description?: string;
   price: number;
   minimumStockQuantity: number;
-  unitOfMeasure: number;
+  unitOfMeasurement: number;
   actualStockQuantity: number;
   categoryPublicId: string;
   categoryName: string;

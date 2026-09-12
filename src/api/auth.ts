@@ -7,7 +7,17 @@ export async function login(req: LoginRequest): Promise<LoginResponse> {
 }
 
 export async function register(req: RegisterRequest): Promise<void> {
-  await apiClient.post('/api/auth/register', req);
+  const form = new FormData();
+  form.append('firstName', req.firstName);
+  form.append('lastName', req.lastName);
+  form.append('username', req.username);
+  form.append('email', req.email);
+  form.append('password', req.password);
+  form.append('companyName', req.companyName);
+  form.append('pib', req.pib);
+  if (req.address) form.append('address', req.address);
+  if (req.logo) form.append('logo', req.logo);
+  await apiClient.post('/api/auth/register', form);
 }
 
 export async function logoutApi(refreshToken: string): Promise<void> {
