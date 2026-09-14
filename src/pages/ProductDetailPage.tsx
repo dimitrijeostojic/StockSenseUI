@@ -88,8 +88,9 @@ export function ProductDetailPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: 14, marginBottom: 28 }}>
         <InfoCard label={t('price')} value={formatMoney(product.price)} />
+        <InfoCard label={t('field_vat_rate')} value={`${product.vatRate}%`} />
         <InfoCard
           label={t('current_stock')}
           value={String(actualStock)}

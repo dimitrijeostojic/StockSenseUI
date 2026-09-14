@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProducts, createProduct, updateProduct, deleteProduct, createStockEntry, bulkImportProducts } from '../api/products';
-import type { BulkImportResult } from '../api/products';
+import type { BulkImportResult, UpdateProductBody } from '../api/products';
 import { getCategories } from '../api/categories';
 import { getSuppliers } from '../api/suppliers';
 import type { ProductDto, CategoryDto, SupplierDto } from '../types';
@@ -26,6 +26,7 @@ interface ProductModalState {
   sku: string;
   description: string;
   price: string;
+  vatRate: string;
   minimumStockQuantity: string;
   unitOfMeasurement: string;
   categoryId: string;
@@ -58,7 +59,7 @@ interface Query {
   isAscending: boolean;
 }
 
-const emptyProduct: ProductModalState = { open: true, mode: 'add', name: '', sku: '', description: '', price: '', minimumStockQuantity: '', unitOfMeasurement: '1', categoryId: '', supplierId: '' };
+const emptyProduct: ProductModalState = { open: true, mode: 'add', name: '', sku: '', description: '', price: '', vatRate: '20', minimumStockQuantity: '', unitOfMeasurement: '1', categoryId: '', supplierId: '' };
 
 export function ProductsPage() {
   const { showToast } = useToast();
@@ -133,16 +134,19 @@ export function ProductsPage() {
   };
 
   const openEdit = async (p: ProductDto) => {
-    setProductErrors({});
     setApiError([]);
     if (suppliers.length === 0) {
       const sups = await getSuppliers();
       setSuppliers(sups.items);
     }
+    const sku = p.sku ?? '';
+    const preErrors: { name?: string; sku?: string; price?: string } = {};
+    if (!sku.trim()) preErrors.sku = t('field_required');
+    setProductErrors(preErrors);
     setProductModal({
       open: true, mode: 'edit', publicId: p.publicId,
-      name: p.name, sku: p.sku, description: p.description ?? '',
-      price: String(p.price), minimumStockQuantity: String(p.minimumStockQuantity),
+      name: p.name, sku, description: p.description ?? '',
+      price: String(p.price), vatRate: String(p.vatRate ?? 20), minimumStockQuantity: String(p.minimumStockQuantity),
       unitOfMeasurement: String(p.unitOfMeasurement ?? 1),
       categoryId: p.categoryPublicId, supplierId: p.supplierPublicId,
     });
@@ -152,27 +156,30 @@ export function ProductsPage() {
     if (!productModal) return;
     const errs: { name?: string; sku?: string; price?: string } = {};
     if (!productModal.name.trim()) errs.name = t('field_required');
-    if (!productModal.sku.trim()) errs.sku = t('field_required');
+    if (!(productModal.sku ?? '').trim()) errs.sku = t('field_required');
+    else if (productModal.sku.trim().length > 20) errs.sku = t('sku_max_length');
+    else if (!/^[A-Za-z0-9\-_]+$/.test(productModal.sku.trim())) errs.sku = t('sku_invalid_format');
     const priceVal = parseFloat(productModal.price);
     if (!productModal.price || isNaN(priceVal) || priceVal <= 0) errs.price = t('price_positive');
     if (Object.keys(errs).length) { setProductErrors(errs); return; }
     setProductErrors({});
     setSaving(true);
     try {
-      const body = {
+      const sharedFields = {
         name: productModal.name, sku: productModal.sku, description: productModal.description,
         price: parseFloat(productModal.price) || 0,
+        vatRate: parseFloat(productModal.vatRate) || 20,
         minimumStockQuantity: parseInt(productModal.minimumStockQuantity) || 0,
         unitOfMeasurement: parseInt(productModal.unitOfMeasurement) || 1,
-        categoryPublicId: productModal.categoryId, supplierPublicId: productModal.supplierId,
       };
       if (productModal.mode === 'add') {
-        await createProduct(body);
+        await createProduct({ ...sharedFields, categoryPublicId: productModal.categoryId, supplierPublicId: productModal.supplierId });
         showToast(t('product_added'));
         setProductModal(null);
         setQuery(q => ({ ...q, pageNumber: 1 }));
       } else {
-        await updateProduct(productModal.publicId!, body);
+        const updateBody: UpdateProductBody = { ...sharedFields, categoryId: productModal.categoryId, supplierId: productModal.supplierId };
+        await updateProduct(productModal.publicId!, updateBody);
         showToast(t('product_updated'));
         setProductModal(null);
         await load();
@@ -371,7 +378,12 @@ export function ProductsPage() {
                 </Field>
                 <Field label={t('field_sku')} error={productErrors.sku} required>
                   <Input error={!!productErrors.sku} placeholder="e.g. WM-001" value={pm.sku}
-                    onChange={e => { setProductModal(prev => ({ ...prev!, sku: e.target.value })); setProductErrors(prev => ({ ...prev, sku: undefined })); }} />
+                    onChange={e => {
+                      setProductModal(prev => ({ ...prev!, sku: e.target.value }));
+                      if (!e.target.value.trim()) setProductErrors(prev => ({ ...prev, sku: t('field_required') }));
+                      else setProductErrors(prev => ({ ...prev, sku: undefined }));
+                    }}
+                    onBlur={e => { if (!e.target.value.trim()) setProductErrors(prev => ({ ...prev, sku: t('field_required') })); }} />
                 </Field>
               </div>
               <Field label={t('description')} optional>
@@ -386,13 +398,22 @@ export function ProductsPage() {
                   <Input type="number" placeholder="0" value={pm.minimumStockQuantity} onChange={e => setProductModal(prev => ({ ...prev!, minimumStockQuantity: e.target.value }))} />
                 </Field>
               </div>
-              <Field label={t('field_unit_of_measurement')} required>
-                <Select value={pm.unitOfMeasurement} onChange={e => setProductModal(prev => ({ ...prev!, unitOfMeasurement: e.target.value }))}>
-                  {Object.entries(UOM_KEYS).map(([val, key]) => (
-                    <option key={val} value={val}>{t(key)}</option>
-                  ))}
-                </Select>
-              </Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Field label={t('field_unit_of_measurement')} required>
+                  <Select value={pm.unitOfMeasurement} onChange={e => setProductModal(prev => ({ ...prev!, unitOfMeasurement: e.target.value }))}>
+                    {Object.entries(UOM_KEYS).map(([val, key]) => (
+                      <option key={val} value={val}>{t(key)}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={t('field_vat_rate')} required>
+                  <Select value={pm.vatRate} onChange={e => setProductModal(prev => ({ ...prev!, vatRate: e.target.value }))}>
+                    <option value="0">0%</option>
+                    <option value="10">10%</option>
+                    <option value="20">20%</option>
+                  </Select>
+                </Field>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <Field label={t('category')} required>
                   <Select value={pm.categoryId} onChange={e => setProductModal(prev => ({ ...prev!, categoryId: e.target.value }))}>

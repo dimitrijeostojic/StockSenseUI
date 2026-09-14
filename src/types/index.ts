@@ -69,6 +69,7 @@ export interface ProductDto {
   sku: string;
   description?: string;
   price: number;
+  vatRate: number;
   minimumStockQuantity: number;
   unitOfMeasurement: number;
   actualStockQuantity: number;

@@ -79,6 +79,7 @@ export const sr: Record<TranslationKey, string> = {
   product_delete_failed: 'Greška pri brisanju proizvoda',
   field_sku: 'SKU',
   field_unit_of_measurement: 'Jedinica mere',
+  field_vat_rate: 'Stopa PDV-a (%)',
   unit_piece: 'Komad',
   unit_linear_meter: 'Dužni metar',
   unit_square_meter: 'Kvadratni metar',
@@ -260,6 +261,8 @@ export const sr: Record<TranslationKey, string> = {
 
   // Validation
   field_required: 'Polje je obavezno',
+  sku_max_length: 'SKU mora imati najviše 20 karaktera',
+  sku_invalid_format: 'SKU može sadržati samo slova, brojeve, crtice i donje crtice',
   email_invalid: 'Nevažeća email adresa',
   password_min_length: 'Potrebno najmanje 6 karaktera',
   price_positive: 'Mora biti veće od 0',

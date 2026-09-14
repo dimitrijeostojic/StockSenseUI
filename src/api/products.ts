@@ -26,6 +26,7 @@ export interface CreateProductBody {
   sku: string;
   description?: string;
   price: number;
+  vatRate: number;
   minimumStockQuantity: number;
   unitOfMeasurement: number;
   categoryPublicId: string;
@@ -36,7 +37,19 @@ export async function createProduct(body: CreateProductBody): Promise<void> {
   await apiClient.post('/api/product', body);
 }
 
-export async function updateProduct(publicId: string, body: CreateProductBody): Promise<void> {
+export interface UpdateProductBody {
+  name: string;
+  sku: string;
+  description?: string;
+  price: number;
+  vatRate: number;
+  minimumStockQuantity: number;
+  unitOfMeasurement: number;
+  categoryId: string;
+  supplierId: string;
+}
+
+export async function updateProduct(publicId: string, body: UpdateProductBody): Promise<void> {
   await apiClient.put(`/api/product/${publicId}`, body);
 }
 

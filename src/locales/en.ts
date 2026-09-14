@@ -77,6 +77,7 @@ export const en = {
   product_delete_failed: 'Failed to delete product',
   field_sku: 'SKU',
   field_unit_of_measurement: 'Unit of measurement',
+  field_vat_rate: 'VAT Rate (%)',
   unit_piece: 'Piece',
   unit_linear_meter: 'Linear Meter',
   unit_square_meter: 'Square Meter',
@@ -258,6 +259,8 @@ export const en = {
 
   // Validation
   field_required: 'This field is required',
+  sku_max_length: 'SKU must be 20 characters or fewer',
+  sku_invalid_format: 'SKU may only contain letters, numbers, hyphens and underscores',
   email_invalid: 'Invalid email format',
   password_min_length: 'At least 6 characters required',
   price_positive: 'Must be greater than 0',
