@@ -64,7 +64,9 @@ export interface CreateStockEntryBody {
 }
 
 export async function createStockEntry(productId: string, body: CreateStockEntryBody): Promise<void> {
-  await apiClient.post(`/api/product/${productId}/stockentry`, body);
+  await apiClient.post(`/api/product/${productId}/stockentry`, body, {
+    headers: { 'X-Idempotency-Key': crypto.randomUUID() },
+  });
 }
 
 export async function getStockEntries(productId: string): Promise<StockEntryDto[]> {
@@ -81,6 +83,8 @@ export interface BulkImportResult {
 export async function bulkImportProducts(file: File): Promise<BulkImportResult> {
   const form = new FormData();
   form.append('file', file);
-  const { data } = await apiClient.post<BulkImportResult>('/api/product/bulk-import', form);
+  const { data } = await apiClient.post<BulkImportResult>('/api/product/bulk-import', form, {
+    headers: { 'X-Idempotency-Key': crypto.randomUUID() },
+  });
   return data;
 }

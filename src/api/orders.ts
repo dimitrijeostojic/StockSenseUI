@@ -19,7 +19,9 @@ export interface CreateOrderBody {
 }
 
 export async function createOrder(body: CreateOrderBody): Promise<void> {
-  await apiClient.post('/api/order', body);
+  await apiClient.post('/api/order', body, {
+    headers: { 'X-Idempotency-Key': crypto.randomUUID() },
+  });
 }
 
 export interface UpdateOrderBody {
