@@ -31,6 +31,7 @@ interface EditOrderModalState {
   supplierId: string;
   orderDate: string;
   notes: string;
+  items: OrderItem[];
 }
 
 interface Query {
@@ -57,7 +58,7 @@ export function OrdersPage() {
   const [searchInput, setSearchInput] = useState('');
   const [modal, setModal] = useState<OrderModalState | null>(null);
   const [newOrderErrors, setNewOrderErrors] = useState<{ items?: string }>({});
-  const [editErrors, setEditErrors] = useState<{ orderDate?: string }>({});
+  const [editErrors, setEditErrors] = useState<{ orderDate?: string; items?: string }>({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<string[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -206,7 +207,7 @@ export function OrdersPage() {
   };
 
   const openEdit = async (o: OrderListDto) => {
-    const detail = await getDetail(o.publicId);
+    const [detail] = await Promise.all([getDetail(o.publicId), loadDropdowns()]);
     if (!detail) { showToast(t('order_load_failed')); return; }
     setEditErrors({});
     setApiError([]);
@@ -215,14 +216,16 @@ export function OrdersPage() {
       supplierId: detail.supplierPublicId,
       orderDate: detail.orderDate.slice(0, 10),
       notes: detail.notes ?? '',
+      items: detail.orderItems.map(it => ({ productId: it.productPublicId, quantity: String(it.quantity) })),
     });
   };
 
   const saveEdit = async () => {
     if (!editModal) return;
-    const errs: { orderDate?: string } = {};
+    const errs: { orderDate?: string; items?: string } = {};
     if (!editModal.orderDate) errs.orderDate = t('field_required');
-    if (errs.orderDate) { setEditErrors(errs); return; }
+    if (!editModal.items.length) errs.items = t('add_at_least_one');
+    if (errs.orderDate || errs.items) { setEditErrors(errs); return; }
     setEditErrors({});
     setSaving(true);
     try {
@@ -230,6 +233,7 @@ export function OrdersPage() {
         supplierPublicId: editModal.supplierId,
         orderDate: new Date(editModal.orderDate).toISOString(),
         notes: editModal.notes || undefined,
+        orderItemsDto: editModal.items.map(it => ({ productPublicId: it.productId, quantity: parseInt(it.quantity) || 1 })),
       });
       showToast(t('order_updated'));
       setEditModal(null);
@@ -247,6 +251,14 @@ export function OrdersPage() {
   const orderModalTotal = () => {
     if (!modal) return 0;
     return modal.items.reduce((sum, it) => {
+      const prod = products.find(p => p.publicId === it.productId);
+      return sum + (parseInt(it.quantity) || 0) * (prod?.price ?? 0);
+    }, 0);
+  };
+
+  const editModalTotal = () => {
+    if (!editModal) return 0;
+    return editModal.items.reduce((sum, it) => {
       const prod = products.find(p => p.publicId === it.productId);
       return sum + (parseInt(it.quantity) || 0) * (prod?.price ?? 0);
     }, 0);
@@ -359,11 +371,11 @@ export function OrdersPage() {
       />
 
       {/* Edit Order Modal */}
-      <Modal open={!!editModal} onClose={() => { setEditModal(null); setApiError([]); }} width={460}>
+      <Modal open={!!editModal} onClose={() => { setEditModal(null); setApiError([]); }} width={560}>
         {editModal && (
           <>
             <ModalTitle>{t('edit_order_title')}</ModalTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
               <Field label={t('supplier')} required>
                 <Select value={editModal.supplierId} onChange={e => setEditModal(prev => ({ ...prev!, supplierId: e.target.value }))}>
                   {suppliers.map(s => <option key={s.publicId} value={s.publicId}>{s.name}</option>)}
@@ -371,12 +383,52 @@ export function OrdersPage() {
               </Field>
               <Field label={t('order_date_field')} error={editErrors.orderDate} required>
                 <Input error={!!editErrors.orderDate} type="date" value={editModal.orderDate}
-                  onChange={e => { setEditModal(prev => ({ ...prev!, orderDate: e.target.value })); setEditErrors({}); }} />
+                  onChange={e => { setEditModal(prev => ({ ...prev!, orderDate: e.target.value })); setEditErrors(prev => ({ ...prev, orderDate: undefined })); }} />
               </Field>
-              <Field label={t('notes')} optional>
-                <Input placeholder="Optional note" value={editModal.notes} onChange={e => setEditModal(prev => ({ ...prev!, notes: e.target.value }))} />
-              </Field>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Field label={t('notes')} optional>
+                  <Input placeholder="Optional note" value={editModal.notes} onChange={e => setEditModal(prev => ({ ...prev!, notes: e.target.value }))} />
+                </Field>
+              </div>
             </div>
+
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{t('items_label')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {editModal.items.map((it, idx) => {
+                const prod = products.find(p => p.publicId === it.productId);
+                const lineTotal = (parseInt(it.quantity) || 0) * (prod?.price ?? 0);
+                return (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 0.8fr 0.9fr auto', gap: 8, alignItems: 'center', background: '#fafafa', border: '1px solid #ececf0', borderRadius: 10, padding: 10 }}>
+                    <select value={it.productId}
+                      onChange={e => setEditModal(prev => ({ ...prev!, items: prev!.items.map((item, i) => i === idx ? { ...item, productId: e.target.value } : item) }))}
+                      style={{ height: 36, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 13, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
+                      {products.map(p => <option key={p.publicId} value={p.publicId}>{p.name}</option>)}
+                    </select>
+                    <input type="number" value={it.quantity} placeholder="Qty"
+                      onChange={e => setEditModal(prev => ({ ...prev!, items: prev!.items.map((item, i) => i === idx ? { ...item, quantity: e.target.value } : item) }))}
+                      style={{ height: 36, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 13, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }} />
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#18181b', textAlign: 'right' }}>{formatMoney(lineTotal)}</div>
+                    <button onClick={() => setEditModal(prev => ({ ...prev!, items: prev!.items.filter((_, i) => i !== idx) }))}
+                      style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #fbdada', background: '#fff5f5', color: '#dc2626', fontSize: 15, fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1 }}>
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => { setEditModal(prev => ({ ...prev!, items: [...prev!.items, { productId: products[0]?.publicId ?? '', quantity: '1' }] })); setEditErrors(prev => ({ ...prev, items: undefined })); }}
+              style={{ marginTop: 10, height: 36, padding: '0 14px', borderRadius: 8, border: `1px dashed ${editErrors.items ? '#dc2626' : '#d4d4d8'}`, background: '#ffffff', color: editErrors.items ? '#dc2626' : '#71717a', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+              {t('add_item')}
+            </button>
+            {editErrors.items && <div style={{ fontSize: 11.5, color: '#dc2626', marginTop: 4 }}>{editErrors.items}</div>}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, paddingTop: 14, borderTop: '1px solid #ececf0' }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>{t('order_total')}</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatMoney(editModalTotal())}</div>
+            </div>
+
             <ApiErrorBox errors={apiError} />
             <ModalActions>
               <BtnSecondary onClick={() => { setEditModal(null); setApiError([]); }}>{t('cancel')}</BtnSecondary>

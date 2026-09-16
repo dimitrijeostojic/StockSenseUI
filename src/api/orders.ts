@@ -28,6 +28,7 @@ export interface UpdateOrderBody {
   supplierPublicId: string;
   orderDate: string;
   notes?: string;
+  orderItemsDto?: Array<{ productPublicId: string; quantity: number }>;
 }
 
 export async function updateOrder(publicId: string, body: UpdateOrderBody): Promise<void> {

@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getSupplierById } from '../api/suppliers';
 import { getProducts } from '../api/products';
 import { getOrders } from '../api/orders';
-import type { SupplierDetailDto, ProductDto, OrderListDto } from '../types';
+import type { SupplierDetailDto, ProductDto, OrderListDto, PagedResponse } from '../types';
 import { formatMoney, formatDate, statusColors } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { PageHeader, LoadingState, EmptyState, TableCard } from '../components/Layout';
+import { PageHeader, LoadingState, EmptyState, TableCard, Pagination } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function InfoCard({ label, value }: { label: string; value: string }) {
@@ -31,9 +31,13 @@ export function SupplierDetailPage() {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
   const [supplier, setSupplier] = useState<SupplierDetailDto | null>(null);
-  const [products, setProducts] = useState<ProductDto[]>([]);
-  const [orders, setOrders] = useState<OrderListDto[]>([]);
+  const [productsResp, setProductsResp] = useState<PagedResponse<ProductDto> | null>(null);
+  const [ordersResp, setOrdersResp] = useState<PagedResponse<OrderListDto> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [prodPage, setProdPage] = useState(1);
+  const [prodPageSize, setProdPageSize] = useState(10);
+  const [ordPage, setOrdPage] = useState(1);
+  const [ordPageSize, setOrdPageSize] = useState(10);
   const isMobile = useIsMobile();
   const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
 
@@ -41,16 +45,42 @@ export function SupplierDetailPage() {
     if (!publicId) return;
     Promise.all([
       getSupplierById(publicId),
-      getProducts({ filterOn: 'supplierPublicId', filterQuery: publicId, pageSize: 100 }),
-      getOrders({ filterOn: 'SupplierPublicId', filterQuery: publicId, pageSize: 100 }),
+      getProducts({ filterOn: 'supplierPublicId', filterQuery: publicId, pageNumber: 1, pageSize: prodPageSize }),
+      getOrders({ filterOn: 'SupplierPublicId', filterQuery: publicId, pageNumber: 1, pageSize: ordPageSize }),
     ])
-      .then(([sup, prod, ord]) => {
-        setSupplier(sup);
-        setProducts(prod.items);
-        setOrders(ord.items);
-      })
+      .then(([sup, prod, ord]) => { setSupplier(sup); setProductsResp(prod); setOrdersResp(ord); })
       .finally(() => setLoading(false));
   }, [publicId]);
+
+  const handleProdPageChange = (page: number) => {
+    if (!publicId) return;
+    setProdPage(page);
+    getProducts({ filterOn: 'supplierPublicId', filterQuery: publicId, pageNumber: page, pageSize: prodPageSize })
+      .then(setProductsResp);
+  };
+
+  const handleProdPageSizeChange = (size: number) => {
+    if (!publicId) return;
+    setProdPageSize(size);
+    setProdPage(1);
+    getProducts({ filterOn: 'supplierPublicId', filterQuery: publicId, pageNumber: 1, pageSize: size })
+      .then(setProductsResp);
+  };
+
+  const handleOrdPageChange = (page: number) => {
+    if (!publicId) return;
+    setOrdPage(page);
+    getOrders({ filterOn: 'SupplierPublicId', filterQuery: publicId, pageNumber: page, pageSize: ordPageSize })
+      .then(setOrdersResp);
+  };
+
+  const handleOrdPageSizeChange = (size: number) => {
+    if (!publicId) return;
+    setOrdPageSize(size);
+    setOrdPage(1);
+    getOrders({ filterOn: 'SupplierPublicId', filterQuery: publicId, pageNumber: 1, pageSize: size })
+      .then(setOrdersResp);
+  };
 
   if (loading) return <LoadingState />;
   if (!supplier) return <EmptyState message={t('supplier_not_found')} />;
@@ -58,6 +88,9 @@ export function SupplierDetailPage() {
   const hasLocation = supplier.address || supplier.city || supplier.country;
   const PROD_GRID = isMobile ? '1fr 1fr 1fr' : '2fr 1fr 1fr 1fr 1fr';
   const ORD_GRID = isMobile ? '1fr 1fr' : '1.5fr 1fr 1fr';
+
+  const prodTotalPages = productsResp ? Math.max(1, Math.ceil(productsResp.totalCount / prodPageSize)) : 1;
+  const ordTotalPages = ordersResp ? Math.max(1, Math.ceil(ordersResp.totalCount / ordPageSize)) : 1;
 
   return (
     <>
@@ -105,9 +138,9 @@ export function SupplierDetailPage() {
           {!isMobile && <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('actions')}</div>}
         </div>
 
-        {orders.length === 0 && <EmptyState message={t('no_supplier_orders')} />}
+        {(ordersResp?.items.length ?? 0) === 0 && <EmptyState message={t('no_supplier_orders')} />}
 
-        {orders.map(o => {
+        {ordersResp?.items.map(o => {
           const sc = statusColors(o.orderStatus);
           const statusLabel = STATUS_LABELS[o.orderStatus] ?? String(o.orderStatus);
           return (
@@ -131,6 +164,17 @@ export function SupplierDetailPage() {
             </div>
           );
         })}
+
+        {(ordersResp?.totalCount ?? 0) > 0 && (
+          <Pagination
+            pageNumber={ordPage}
+            pageSize={ordPageSize}
+            totalCount={ordersResp!.totalCount}
+            totalPages={ordTotalPages}
+            onPageChange={handleOrdPageChange}
+            onPageSizeChange={handleOrdPageSizeChange}
+          />
+        )}
       </TableCard>
 
       <SectionTitle>{t('supplier_products')}</SectionTitle>
@@ -143,9 +187,9 @@ export function SupplierDetailPage() {
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_stock')}</div>
         </div>
 
-        {products.length === 0 && <EmptyState message={t('no_supplier_products')} />}
+        {(productsResp?.items.length ?? 0) === 0 && <EmptyState message={t('no_supplier_products')} />}
 
-        {products.map(p => (
+        {productsResp?.items.map(p => (
           <div
             key={p.publicId}
             onClick={() => navigate(`/products/${p.publicId}`)}
@@ -162,6 +206,17 @@ export function SupplierDetailPage() {
             </div>
           </div>
         ))}
+
+        {(productsResp?.totalCount ?? 0) > 0 && (
+          <Pagination
+            pageNumber={prodPage}
+            pageSize={prodPageSize}
+            totalCount={productsResp!.totalCount}
+            totalPages={prodTotalPages}
+            onPageChange={handleProdPageChange}
+            onPageSizeChange={handleProdPageSizeChange}
+          />
+        )}
       </TableCard>
     </>
   );

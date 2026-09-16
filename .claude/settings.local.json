@@ -23,7 +23,10 @@
       "Bash(xargs grep -l \"ValidationException\\\\|ProblemDetails\\\\|ValidationBehavior\\\\|ExceptionMiddleware\\\\|GlobalExceptionHandler\")",
       "Bash(xargs grep -l \"GetAllSuppliers\\\\|GetSuppliersResponse\\\\|SupplierListDto\\\\|SupplierDto\")",
       "Bash(xargs grep -l \"GetSupplierById\\\\|GetSupplierByIdResponse\")",
-      "Bash(xargs grep -A 20 \"FilterOn\\\\|filterOn\\\\|Supplier\\\\|supplier\")"
+      "Bash(xargs grep -A 20 \"FilterOn\\\\|filterOn\\\\|Supplier\\\\|supplier\")",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\DimitrijeOstojic\\\\Desktop\\\\Dimitrije\\\\Privatno\\\\StockSense\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

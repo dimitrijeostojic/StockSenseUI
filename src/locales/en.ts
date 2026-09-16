@@ -256,6 +256,12 @@ export const en = {
   no_stock_entries: 'No stock entries yet.',
   back: '← Back',
   product_not_found: 'Product not found.',
+  stock_value: 'Stock value',
+  days_to_stockout: 'Est. days left',
+  at_current_rate: 'at current rate',
+  no_consumption_data: 'No consumption data',
+  stock_trend: 'Stock trend',
+  view_supplier: 'View supplier',
 
   // Validation
   field_required: 'This field is required',

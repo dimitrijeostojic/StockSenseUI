@@ -258,6 +258,12 @@ export const sr: Record<TranslationKey, string> = {
   no_stock_entries: 'Još nema unosa zaliha.',
   back: '← Nazad',
   product_not_found: 'Proizvod nije pronađen.',
+  stock_value: 'Vrednost zalihe',
+  days_to_stockout: 'Procena dana',
+  at_current_rate: 'po trenutnoj stopi',
+  no_consumption_data: 'Nema podataka o potrošnji',
+  stock_trend: 'Trend zaliha',
+  view_supplier: 'Pogledaj dobavljača',
 
   // Validation
   field_required: 'Polje je obavezno',
