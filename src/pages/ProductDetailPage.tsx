@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getProductById, getStockEntries } from '../api/products';
+import { getProductById, getStockEntries, deleteProduct } from '../api/products';
 import type { ProductDto, StockEntryDto } from '../types';
 import { formatMoney, formatDate, UOM_KEYS } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useToast } from '../contexts/ToastContext';
 import { PageHeader, TableCard, LoadingState, EmptyState, Pagination } from '../components/Layout';
+import { ConfirmModal } from '../components/Modal';
+import { extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 const SWATCHES = ['#6d28d9', '#2563eb', '#16a34a', '#d97706', '#db2777', '#0891b2'];
@@ -97,13 +100,32 @@ export function ProductDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
+  const { showToast } = useToast();
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [entries, setEntries] = useState<StockEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const isMobile = useIsMobile();
   const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
+
+  const handleDelete = async () => {
+    if (!publicId) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteProduct(publicId);
+      showToast(t('product_deleted'));
+      navigate('/products');
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err) ?? t('product_delete_failed'));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!publicId) return;
@@ -157,6 +179,16 @@ export function ProductDetailPage() {
               }}
             >
               {t('view_supplier')}
+            </button>
+            <button
+              onClick={() => { setShowConfirm(true); setDeleteError(null); }}
+              style={{
+                height: 38, padding: '0 16px', borderRadius: 10,
+                border: '1px solid #fbdada', background: '#fff5f5', color: '#dc2626',
+                fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              {t('delete')}
             </button>
             <button
               onClick={() => navigate('/products')}
@@ -257,6 +289,16 @@ export function ProductDetailPage() {
           />
         )}
       </TableCard>
+
+      <ConfirmModal
+        open={showConfirm}
+        onClose={() => { setShowConfirm(false); setDeleteError(null); }}
+        onConfirm={handleDelete}
+        title={t('delete_product')}
+        message={t('cannot_undo')}
+        error={deleteError ?? undefined}
+        loading={deleting}
+      />
     </>
   );
 }

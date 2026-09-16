@@ -177,9 +177,10 @@ interface ConfirmModalProps {
   message?: string;
   confirmLabel?: string;
   loading?: boolean;
+  error?: string;
 }
 
-export function ConfirmModal({ open, onClose, onConfirm, title, message, confirmLabel, loading }: ConfirmModalProps) {
+export function ConfirmModal({ open, onClose, onConfirm, title, message, confirmLabel, loading, error }: ConfirmModalProps) {
   const { t } = useLanguage();
   const label = confirmLabel ?? t('delete');
   return (
@@ -187,6 +188,11 @@ export function ConfirmModal({ open, onClose, onConfirm, title, message, confirm
       <ModalTitle>{title}</ModalTitle>
       {message && (
         <div style={{ fontSize: 13.5, color: '#52525b', marginBottom: 4 }}>{message}</div>
+      )}
+      {error && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginTop: 12 }}>
+          <div style={{ fontSize: 12.5, color: '#dc2626', lineHeight: 1.6 }}>{error}</div>
+        </div>
       )}
       <ModalActions>
         <BtnSecondary onClick={onClose}>{t('cancel')}</BtnSecondary>

@@ -10,7 +10,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, Pagination } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
-import { extractApiErrors } from '../api/client';
+import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { UOM_KEYS } from '../types';
 
@@ -80,6 +80,8 @@ export function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<string[]>([]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [importModal, setImportModal] = useState<ImportModalState | null>(null);
 
   // Debounce search
@@ -193,13 +195,19 @@ export function ProductsPage() {
     }
   };
 
-  const handleDelete = async (publicId: string) => {
+  const handleDelete = async () => {
+    if (!confirmId) return;
+    setDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteProduct(publicId);
+      await deleteProduct(confirmId);
       showToast(t('product_deleted'));
+      setConfirmId(null);
       await load();
-    } catch {
-      showToast(t('product_delete_failed'));
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err) ?? t('product_delete_failed'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -359,10 +367,12 @@ export function ProductsPage() {
 
       <ConfirmModal
         open={!!confirmId}
-        onClose={() => setConfirmId(null)}
-        onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
+        onClose={() => { setConfirmId(null); setDeleteError(null); }}
+        onConfirm={handleDelete}
         title={t('delete_product')}
         message={t('cannot_undo')}
+        error={deleteError ?? undefined}
+        loading={deleting}
       />
 
       {/* Product Modal */}

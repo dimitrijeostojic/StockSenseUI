@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, LoadingState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
-import { extractApiErrors } from '../api/client';
+import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface CategoryModalState {
@@ -26,6 +26,8 @@ export function CategoriesPage() {
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState<string[]>([]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
@@ -63,13 +65,19 @@ export function CategoriesPage() {
     }
   };
 
-  const handleDelete = async (publicId: string) => {
+  const handleDelete = async () => {
+    if (!confirmId) return;
+    setDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteCategory(publicId);
+      await deleteCategory(confirmId);
       showToast(t('category_deleted'));
+      setConfirmId(null);
       await load();
-    } catch {
-      showToast(t('category_delete_failed'));
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err) ?? t('category_delete_failed'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -108,10 +116,12 @@ export function CategoriesPage() {
 
       <ConfirmModal
         open={!!confirmId}
-        onClose={() => setConfirmId(null)}
-        onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
+        onClose={() => { setConfirmId(null); setDeleteError(null); }}
+        onConfirm={handleDelete}
         title={t('delete_category')}
         message={t('cannot_undo')}
+        error={deleteError ?? undefined}
+        loading={deleting}
       />
 
       <Modal open={!!modal} onClose={() => { setModal(null); setApiError([]); }} width={400}>

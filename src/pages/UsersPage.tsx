@@ -5,7 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, TableCard, ActionBtn, LoadingState, EmptyState, AddButton } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, PasswordInput, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
-import { extractApiErrors } from '../api/client';
+import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 function RoleBadge({ roles }: { roles: string[] }) {
@@ -32,6 +32,7 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmUser, setConfirmUser] = useState<UserDto | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<AdminRegisterUserRequest>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof AdminRegisterUserRequest, string>>>({});
@@ -45,14 +46,17 @@ export function UsersPage() {
 
   useEffect(() => { load().finally(() => setLoading(false)); }, [load]);
 
-  const handleDelete = async (user: UserDto) => {
-    setDeleting(user.userPublicId);
+  const handleDelete = async () => {
+    if (!confirmUser) return;
+    setDeleting(confirmUser.userPublicId);
+    setDeleteError(null);
     try {
-      await deleteUser(user.userPublicId);
+      await deleteUser(confirmUser.userPublicId);
       showToast(t('user_deleted'));
+      setConfirmUser(null);
       await load();
-    } catch {
-      showToast(t('user_delete_failed'));
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err) ?? t('user_delete_failed'));
     } finally {
       setDeleting(null);
     }
@@ -99,11 +103,12 @@ export function UsersPage() {
     <>
       <ConfirmModal
         open={!!confirmUser}
-        onClose={() => setConfirmUser(null)}
-        onConfirm={() => { if (confirmUser) handleDelete(confirmUser); setConfirmUser(null); }}
+        onClose={() => { setConfirmUser(null); setDeleteError(null); }}
+        onConfirm={handleDelete}
         title={t('delete_user')}
         message={confirmUser ? `Delete ${confirmUser.firstName} ${confirmUser.lastName} (${confirmUser.email})?` : undefined}
         loading={deleting === confirmUser?.userPublicId}
+        error={deleteError ?? undefined}
       />
 
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setForm(EMPTY_FORM); setErrors({}); setApiError([]); }}>

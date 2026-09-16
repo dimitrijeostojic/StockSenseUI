@@ -21,6 +21,17 @@ export function extractApiErrors(err: unknown): string[] {
   return [];
 }
 
+export function extractErrorMessage(err: unknown): string | null {
+  const data = (err as { response?: { data?: unknown } })?.response?.data;
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  if (typeof d.description === 'string' && d.description) return d.description;
+  if (typeof d.Description === 'string' && d.Description) return d.Description;
+  if (typeof d.message === 'string' && d.message) return d.message;
+  if (typeof d.Message === 'string' && d.Message) return d.Message;
+  return null;
+}
+
 apiClient.interceptors.response.use(
   res => res,
   async error => {

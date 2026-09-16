@@ -9,7 +9,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, StatusBadge, Pagination } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
-import { extractApiErrors } from '../api/client';
+import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 type StatusFilter = '' | 'Pending' | 'Confirmed' | 'Received' | 'Cancelled';
@@ -63,6 +63,8 @@ export function OrdersPage() {
   const [apiError, setApiError] = useState<string[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [editModal, setEditModal] = useState<EditOrderModalState | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
 
@@ -196,13 +198,19 @@ export function OrdersPage() {
     }
   };
 
-  const handleDelete = async (publicId: string) => {
+  const handleDelete = async () => {
+    if (!confirmId) return;
+    setDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteOrder(publicId);
+      await deleteOrder(confirmId);
       showToast(t('order_deleted'));
+      setConfirmId(null);
       await load();
-    } catch {
-      showToast(t('order_delete_failed'));
+    } catch (err) {
+      setDeleteError(extractErrorMessage(err) ?? t('order_delete_failed'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -364,10 +372,12 @@ export function OrdersPage() {
 
       <ConfirmModal
         open={!!confirmId}
-        onClose={() => setConfirmId(null)}
-        onConfirm={() => { handleDelete(confirmId!); setConfirmId(null); }}
+        onClose={() => { setConfirmId(null); setDeleteError(null); }}
+        onConfirm={handleDelete}
         title={t('delete_order')}
         message={t('cannot_undo')}
+        error={deleteError ?? undefined}
+        loading={deleting}
       />
 
       {/* Edit Order Modal */}
