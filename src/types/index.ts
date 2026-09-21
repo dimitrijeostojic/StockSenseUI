@@ -100,6 +100,7 @@ export interface SupplierDto {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  currency: number;
 }
 
 export interface SupplierDetailDto {
@@ -112,6 +113,7 @@ export interface SupplierDetailDto {
   address?: string;
   city?: string;
   country?: string;
+  currency: number;
 }
 
 export interface OrderListDto {
@@ -120,6 +122,7 @@ export interface OrderListDto {
   orderStatus: number;
   supplierName: string;
   supplierPublicId: string;
+  currency: number;
 }
 
 export interface OrderDetailDto {
@@ -129,6 +132,7 @@ export interface OrderDetailDto {
   notes?: string;
   supplierPublicId: string;
   supplierName: string;
+  currency: number;
   orderItems: OrderItemDetailDto[];
 }
 
@@ -147,6 +151,24 @@ export interface StockEntryDto {
   stockEntryType: number;
   productPublicId: string;
   productName: string;
+}
+
+export const CURRENCY: Record<number, string> = {
+  1: 'RSD',
+  2: 'EUR',
+  3: 'USD',
+};
+
+const CURRENCY_SYMBOL: Record<number, string> = {
+  1: 'RSD',
+  2: '€',
+  3: '$',
+};
+
+export function formatAmount(n: number, currency: number) {
+  const sym = CURRENCY_SYMBOL[currency] ?? '$';
+  const formatted = Number(n).toFixed(2);
+  return currency === 1 ? `${formatted} ${sym}` : `${sym}${formatted}`;
 }
 
 export const ORDER_STATUS: Record<number, string> = {

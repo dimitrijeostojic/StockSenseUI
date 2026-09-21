@@ -4,7 +4,7 @@ import { getOrders, getOrderById, createOrder, updateOrder, updateOrderStatus, d
 import { getProducts } from '../api/products';
 import { getSuppliers } from '../api/suppliers';
 import type { OrderListDto, OrderDetailDto, ProductDto, SupplierDto } from '../types';
-import { formatDate, formatMoney } from '../types';
+import { formatDate, formatMoney, formatAmount } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, StatusBadge, Pagination } from '../components/Layout';
@@ -363,7 +363,7 @@ export function OrdersPage() {
               >{o.supplierName}</div>
               <div style={{ fontSize: 13, color: '#52525b' }}>{formatDate(o.orderDate)}</div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>
-                {total != null ? formatMoney(total) : (
+                {total != null ? formatAmount(total, o.currency) : (
                   <button onClick={async () => { await getDetail(o.publicId); }}
                     style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
                     {t('view')}
@@ -511,15 +511,15 @@ export function OrdersPage() {
                     <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 0.6fr 0.8fr 0.8fr', padding: '11px 14px', borderBottom: i < detail.orderItems.length - 1 ? '1px solid #f5f4f7' : 'none', alignItems: 'center' }}>
                       <div style={{ fontSize: 13.5, fontWeight: 600, color: '#18181b' }}>{it.productName}</div>
                       <div style={{ fontSize: 13, color: '#52525b', textAlign: 'right' }}>{it.quantity}</div>
-                      <div style={{ fontSize: 13, color: '#52525b', textAlign: 'right' }}>{formatMoney(it.unitPrice)}</div>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b', textAlign: 'right' }}>{formatMoney(it.quantity * it.unitPrice)}</div>
+                      <div style={{ fontSize: 13, color: '#52525b', textAlign: 'right' }}>{formatAmount(it.unitPrice, detail.currency)}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b', textAlign: 'right' }}>{formatAmount(it.quantity * it.unitPrice, detail.currency)}</div>
                     </div>
                   ))}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 14, borderTop: '1px solid #ececf0' }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: '#71717a' }}>{t('order_total')}</div>
-                  <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatMoney(total ?? 0)}</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatAmount(total ?? 0, detail.currency)}</div>
                 </div>
 
                 <ModalActions>

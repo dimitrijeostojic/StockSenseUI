@@ -11,6 +11,7 @@ export interface SupplierBody {
   contactName: string;
   contactEmail: string;
   supplierCode: string;
+  currency: number;
   contactPhone?: string;
   address?: string;
   city?: string;

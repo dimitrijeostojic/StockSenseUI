@@ -4,7 +4,7 @@ import { getSupplierById } from '../api/suppliers';
 import { getProducts } from '../api/products';
 import { getOrders } from '../api/orders';
 import type { SupplierDetailDto, ProductDto, OrderListDto, PagedResponse } from '../types';
-import { formatMoney, formatDate, statusColors } from '../types';
+import { formatMoney, formatDate, statusColors, CURRENCY } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, LoadingState, EmptyState, TableCard, Pagination } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -112,11 +112,12 @@ export function SupplierDetailPage() {
       />
 
       <SectionTitle>{t('supplier_contact_info')}</SectionTitle>
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: 14 }}>
         <InfoCard label={t('field_supplier_code')} value={supplier.supplierCode} />
         <InfoCard label={t('field_contact')} value={supplier.contactName} />
         <InfoCard label={t('email')} value={supplier.contactEmail} />
         <InfoCard label={t('phone')} value={supplier.contactPhone || '—'} />
+        <InfoCard label={t('field_currency')} value={CURRENCY[supplier.currency] ?? '—'} />
       </div>
 
       {hasLocation && (

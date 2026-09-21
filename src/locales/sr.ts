@@ -138,6 +138,7 @@ export const sr: Record<TranslationKey, string> = {
   field_company: 'Naziv kompanije',
   field_contact: 'Ime kontakta',
   field_supplier_code: 'Kod dobavljača',
+  field_currency: 'Valuta',
   field_address: 'Adresa',
   field_city: 'Grad',
   field_country: 'Zemlja',

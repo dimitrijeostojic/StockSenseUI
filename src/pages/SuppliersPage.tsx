@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierById } from '../api/suppliers';
 import type { SupplierDto } from '../types';
+import { CURRENCY } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, Pagination } from '../components/Layout';
-import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
+import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
 import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -17,6 +18,7 @@ interface SupplierModalState {
   contactName: string;
   contactEmail: string;
   supplierCode: string;
+  currency: number;
   contactPhone: string;
   address: string;
   city: string;
@@ -82,11 +84,11 @@ export function SuppliersPage() {
 
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const openAdd = () => { setErrors({}); setApiError([]); setModal({ open: true, mode: 'add', name: '', contactName: '', contactEmail: '', supplierCode: '', contactPhone: '', address: '', city: '', country: '' }); };
+  const openAdd = () => { setErrors({}); setApiError([]); setModal({ open: true, mode: 'add', name: '', contactName: '', contactEmail: '', supplierCode: '', currency: 2, contactPhone: '', address: '', city: '', country: '' }); };
   const openEdit = async (s: SupplierDto) => {
     setErrors({}); setApiError([]);
     const full = await getSupplierById(s.publicId);
-    setModal({ open: true, mode: 'edit', publicId: s.publicId, name: full.name, contactName: full.contactName, contactEmail: full.contactEmail, supplierCode: full.supplierCode, contactPhone: full.contactPhone ?? '', address: full.address ?? '', city: full.city ?? '', country: full.country ?? '' });
+    setModal({ open: true, mode: 'edit', publicId: s.publicId, name: full.name, contactName: full.contactName, contactEmail: full.contactEmail, supplierCode: full.supplierCode, currency: full.currency, contactPhone: full.contactPhone ?? '', address: full.address ?? '', city: full.city ?? '', country: full.country ?? '' });
   };
 
   const save = async () => {
@@ -100,7 +102,7 @@ export function SuppliersPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
-      const body = { name: modal.name, contactName: modal.contactName, contactEmail: modal.contactEmail, supplierCode: modal.supplierCode, contactPhone: modal.contactPhone || undefined, address: modal.address || undefined, city: modal.city || undefined, country: modal.country || undefined };
+      const body = { name: modal.name, contactName: modal.contactName, contactEmail: modal.contactEmail, supplierCode: modal.supplierCode, currency: modal.currency, contactPhone: modal.contactPhone || undefined, address: modal.address || undefined, city: modal.city || undefined, country: modal.country || undefined };
       if (modal.mode === 'add') {
         await createSupplier(body);
         showToast(t('supplier_added'));
@@ -139,7 +141,7 @@ export function SuppliersPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
   const isMobile = useIsMobile();
-  const GRID = '1.6fr 1.4fr 1.6fr 1.2fr 1fr';
+  const GRID = '1.4fr 1.2fr 1.4fr 0.9fr 0.6fr 1fr';
 
   return (
     <>
@@ -171,11 +173,12 @@ export function SuppliersPage() {
       </div>
 
       <TableCard>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 580 : undefined }}>
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 640 : undefined }}>
           {sortBtn(t('supplier'), 'name')}
           {sortBtn(t('col_contact'), 'contactName')}
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('email')}</div>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('phone')}</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('field_currency')}</div>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
@@ -185,11 +188,12 @@ export function SuppliersPage() {
         )}
 
         {suppliers.map(s => (
-          <div key={s.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 580 : undefined }}>
+          <div key={s.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 640 : undefined }}>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
             <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactName || '—'}</div>
             <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactEmail || '—'}</div>
             <div style={{ fontSize: 13, color: '#52525b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.contactPhone || '—'}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#6d28d9' }}>{CURRENCY[s.currency] ?? '—'}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <ActionBtn onClick={() => navigate(`/suppliers/${s.publicId}`)}>{t('view')}</ActionBtn>
               <ActionBtn onClick={() => openEdit(s)}>{t('edit')}</ActionBtn>
@@ -225,7 +229,7 @@ export function SuppliersPage() {
           <>
             <ModalTitle>{modal.mode === 'add' ? t('add_supplier_title') : t('edit_supplier_title')}</ModalTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 0.8fr', gap: 14 }}>
                 <Field label={t('field_company')} error={errors.name} required>
                   <Input error={!!errors.name} placeholder="e.g. NovaSupply" value={modal.name}
                     onChange={e => { setModal(prev => ({ ...prev!, name: e.target.value })); setErrors(prev => ({ ...prev, name: undefined })); }} />
@@ -233,6 +237,13 @@ export function SuppliersPage() {
                 <Field label={t('field_supplier_code')} error={errors.supplierCode} required>
                   <Input error={!!errors.supplierCode} placeholder="e.g. SUP-001" value={modal.supplierCode}
                     onChange={e => { setModal(prev => ({ ...prev!, supplierCode: e.target.value })); setErrors(prev => ({ ...prev, supplierCode: undefined })); }} />
+                </Field>
+                <Field label={t('field_currency')} required>
+                  <Select value={modal.currency} onChange={e => setModal(prev => ({ ...prev!, currency: parseInt(e.target.value) }))}>
+                    <option value={1}>RSD</option>
+                    <option value={2}>EUR</option>
+                    <option value={3}>USD</option>
+                  </Select>
                 </Field>
               </div>
               <Field label={t('field_contact')} error={errors.contactName} required>

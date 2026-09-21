@@ -136,6 +136,7 @@ export const en = {
   field_company: 'Company name',
   field_contact: 'Contact name',
   field_supplier_code: 'Supplier code',
+  field_currency: 'Currency',
   field_address: 'Address',
   field_city: 'City',
   field_country: 'Country',
