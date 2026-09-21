@@ -202,6 +202,9 @@ export const sr: Record<TranslationKey, string> = {
   order_cancelled_toast: 'Narudžbina otkazana',
   order_transition_failed: 'Greška pri ažuriranju narudžbine',
   export_pdf: 'Izvezi PDF',
+  btn_duplicate: 'Dupliraj',
+  order_duplicated: 'Narudžbina duplicirana — pregledajte i potvrdite',
+  order_duplicate_skipped: 'Neki arhivirani proizvodi su uklonjeni iz duplikata.',
   export_pdf_failed: 'Greška pri izvozu PDF-a',
 
   // Users

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getOrders, getOrderById, createOrder, updateOrder, updateOrderStatus, deleteOrder, exportOrderPdf } from '../api/orders';
 import { getProducts } from '../api/products';
 import { getSuppliers } from '../api/suppliers';
@@ -47,6 +47,7 @@ export function OrdersPage() {
   const { t, lang } = useLanguage();
   const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
   const location = useLocation();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderListDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [orderDetails, setOrderDetails] = useState<Record<string, OrderDetailDto>>({});
@@ -74,8 +75,8 @@ export function OrdersPage() {
   }, [searchInput]);
 
 
-  const loadDropdowns = async () => {
-    if (products.length > 0 && suppliers.length > 0) return;
+  const loadDropdowns = async (forceProducts = false) => {
+    if (!forceProducts && products.length > 0 && suppliers.length > 0) return;
     const [prodRes, supRes] = await Promise.all([getProducts(), getSuppliers()]);
     setProducts(prodRes.items);
     setSuppliers(supRes.items);
@@ -214,6 +215,27 @@ export function OrdersPage() {
     }
   };
 
+  const openDuplicate = async (o: OrderListDto) => {
+    const [detail, dropdowns] = await Promise.all([getDetail(o.publicId), loadDropdowns(true)]);
+    if (!detail) { showToast(t('order_load_failed')); return; }
+    const activeProductIds = new Set((dropdowns?.products ?? products).map(p => p.publicId));
+    const filteredItems = detail.orderItems
+      .filter(it => activeProductIds.has(it.productPublicId))
+      .map(it => ({ productId: it.productPublicId, quantity: String(it.quantity) }));
+    const skipped = detail.orderItems.length - filteredItems.length;
+    if (skipped > 0) showToast(t('order_duplicate_skipped'));
+    const sups = dropdowns?.suppliers ?? suppliers;
+    const supplierStillExists = sups.some(s => s.publicId === detail.supplierPublicId);
+    setNewOrderErrors({});
+    setApiError([]);
+    setModal({
+      open: true,
+      supplierId: supplierStillExists ? detail.supplierPublicId : (sups[0]?.publicId ?? ''),
+      notes: detail.notes ?? '',
+      items: filteredItems.length > 0 ? filteredItems : [{ productId: (dropdowns?.products ?? products)[0]?.publicId ?? '', quantity: '1' }],
+    });
+  };
+
   const openEdit = async (o: OrderListDto) => {
     const [detail] = await Promise.all([getDetail(o.publicId), loadDropdowns()]);
     if (!detail) { showToast(t('order_load_failed')); return; }
@@ -272,7 +294,7 @@ export function OrdersPage() {
     }, 0);
   };
 
-  const GRID = '0.8fr 1.4fr 1fr 1fr 1fr 1.6fr';
+  const GRID = '1.6fr 1fr 1fr 1fr 1.6fr';
 
   return (
     <>
@@ -314,8 +336,7 @@ export function OrdersPage() {
       </div>
 
       <TableCard>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 660 : undefined }}>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_order')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 580 : undefined }}>
           {sortBtn(t('supplier'), 'supplierName')}
           {sortBtn(t('date'), 'orderDate')}
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_total')}</div>
@@ -333,9 +354,13 @@ export function OrdersPage() {
           const total = getTotal(detail);
 
           return (
-            <div key={o.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 660 : undefined }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#71717a' }}>#{o.publicId.slice(0, 8)}</div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>{o.supplierName}</div>
+            <div key={o.publicId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 22px', borderBottom: '1px solid #f5f4f7', alignItems: 'center', minWidth: isMobile ? 580 : undefined }}>
+              <div
+                onClick={() => navigate(`/suppliers/${o.supplierPublicId}`)}
+                style={{ fontSize: 13.5, fontWeight: 700, color: '#6d28d9', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+              >{o.supplierName}</div>
               <div style={{ fontSize: 13, color: '#52525b' }}>{formatDate(o.orderDate)}</div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#18181b' }}>
                 {total != null ? formatMoney(total) : (
@@ -348,6 +373,7 @@ export function OrdersPage() {
               <div><StatusBadge statusNum={o.orderStatus} /></div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <ActionBtn onClick={async () => { await getDetail(o.publicId); setDetailId(o.publicId); }}>{t('btn_details')}</ActionBtn>
+                <ActionBtn onClick={() => openDuplicate(o)}>{t('btn_duplicate')}</ActionBtn>
                 {o.orderStatus === 1 && <ActionBtn onClick={() => openEdit(o)}>{t('edit')}</ActionBtn>}
                 {o.orderStatus === 1 && <ActionBtn variant="blue" onClick={() => transition(o.publicId, 2, t('order_confirmed_toast'))}>{t('btn_confirm')}</ActionBtn>}
                 {o.orderStatus === 2 && <ActionBtn variant="green" onClick={() => transition(o.publicId, 3, t('order_received_toast'))}>{t('btn_receive')}</ActionBtn>}

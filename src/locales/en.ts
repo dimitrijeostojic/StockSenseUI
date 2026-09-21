@@ -201,6 +201,9 @@ export const en = {
   order_transition_failed: 'Failed to update order',
   export_pdf: 'Export PDF',
   export_pdf_failed: 'Failed to export PDF',
+  btn_duplicate: 'Duplicate',
+  order_duplicated: 'Order duplicated — review and confirm',
+  order_duplicate_skipped: 'Some archived products were removed from the duplicate.',
 
   // Users
   users_subtitle: 'Manage users in your tenant',

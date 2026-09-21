@@ -119,6 +119,7 @@ export interface OrderListDto {
   orderDate: string;
   orderStatus: number;
   supplierName: string;
+  supplierPublicId: string;
 }
 
 export interface OrderDetailDto {
