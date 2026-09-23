@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { SignalRProvider } from './contexts/SignalRContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
@@ -60,7 +61,9 @@ export default function App() {
       <LanguageProvider>
         <AuthProvider>
           <ToastProvider>
-            <AppRoutes />
+            <SignalRProvider>
+              <AppRoutes />
+            </SignalRProvider>
           </ToastProvider>
         </AuthProvider>
       </LanguageProvider>
