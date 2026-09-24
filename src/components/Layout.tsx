@@ -78,15 +78,6 @@ const ADMIN_NAV_ITEMS: { to: string; labelKey: TranslationKey; icon: ReactNode }
       </svg>
     ),
   },
-  {
-    to: '/analytics', labelKey: 'nav_analytics',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18">
-        <polyline points="2,14 6,9 9,11 13,5 16,7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="2" y1="16" x2="16" y2="16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      </svg>
-    ),
-  },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {

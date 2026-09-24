@@ -6,7 +6,6 @@ export const en = {
   nav_suppliers: 'Suppliers',
   nav_orders: 'Orders',
   nav_users: 'Users',
-  nav_analytics: 'Analytics',
   nav_logout: 'Log out',
 
   // Common
@@ -301,40 +300,21 @@ export const en = {
   saving: 'Saving…',
 
   // Analytics
-  analytics_subtitle: 'Usage and performance insights',
   analytics_7d: 'Last 7 days',
   analytics_30d: 'Last 30 days',
   analytics_90d: 'Last 90 days',
   analytics_365d: 'Last 365 days',
   analytics_custom: 'Custom',
-  analytics_user_section: 'User Analytics',
-  analytics_registration_trend: 'Registration trend',
-  analytics_activity_by_entity: 'Activity by entity type',
-  analytics_activity_by_action: 'Activity by action type',
-  analytics_top_users: 'Most active users',
-  analytics_actions: 'Actions',
-  analytics_registrations: 'Registrations',
   analytics_no_data: 'No data for this period.',
   analytics_load_failed: 'Failed to load analytics',
-  analytics_business_section: 'Business Analytics',
-  analytics_inventory_stock: 'Current stock levels',
-  analytics_below_minimum_kpi: 'Products below minimum stock',
   analytics_stock_movement: 'Stock movement',
   analytics_in_quantity: 'In',
   analytics_out_quantity: 'Out',
-  analytics_order_volume: 'Order volume',
-  analytics_order_value: 'Order value',
-  analytics_order_status: 'Orders by status',
   analytics_top_suppliers: 'Top suppliers by order count',
-  analytics_col_product: 'Product',
-  analytics_col_current_stock: 'Current stock',
-  analytics_col_min_stock: 'Min. stock',
   analytics_col_supplier: 'Supplier',
   analytics_col_orders: 'Orders',
   analytics_col_value: 'Total value',
-  analytics_total_orders: 'Total orders',
   analytics_total_value: 'Total order value',
-  analytics_below_minimum_count: 'Below minimum',
 };
 
 export type TranslationKey = keyof typeof en;
