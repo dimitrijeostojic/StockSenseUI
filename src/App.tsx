@@ -13,6 +13,7 @@ import { SuppliersPage } from './pages/SuppliersPage';
 import { SupplierDetailPage } from './pages/SupplierDetailPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { UsersPage } from './pages/UsersPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import type { ReactNode } from 'react';
@@ -50,6 +51,7 @@ function AppRoutes() {
       <Route path="/suppliers/:publicId" element={<ProtectedRoute><SupplierDetailPage /></ProtectedRoute>} />
       <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
       <Route path="/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+      <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

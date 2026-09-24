@@ -68,22 +68,33 @@ const BASE_NAV_ITEMS: { to: string; labelKey: TranslationKey; icon: ReactNode }[
   },
 ];
 
-const ADMIN_NAV_ITEM: { to: string; labelKey: TranslationKey; icon: ReactNode } = {
-  to: '/users', labelKey: 'nav_users',
-  icon: (
-    <svg width="18" height="18" viewBox="0 0 18 18">
-      <circle cx="9" cy="6" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M2.5,15.5 C2.5,12 5.4,9.5 9,9.5 C12.6,9.5 15.5,12 15.5,15.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  ),
-};
+const ADMIN_NAV_ITEMS: { to: string; labelKey: TranslationKey; icon: ReactNode }[] = [
+  {
+    to: '/users', labelKey: 'nav_users',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <circle cx="9" cy="6" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M2.5,15.5 C2.5,12 5.4,9.5 9,9.5 C12.6,9.5 15.5,12 15.5,15.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    to: '/analytics', labelKey: 'nav_analytics',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <polyline points="2,14 6,9 9,11 13,5 16,7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="2" y1="16" x2="16" y2="16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
 
 export function Layout({ children }: { children: ReactNode }) {
   const { logout, user, isAdmin, updateUser } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const navItems = useMemo(() => isAdmin ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS, [isAdmin]);
+  const navItems = useMemo(() => isAdmin ? [...BASE_NAV_ITEMS, ...ADMIN_NAV_ITEMS] : BASE_NAV_ITEMS, [isAdmin]);
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
