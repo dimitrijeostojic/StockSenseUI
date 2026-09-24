@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { getUserAnalytics } from '../api/analytics';
-import type { UserAnalyticsResponse } from '../types/analytics';
+import { getUserAnalytics, getBusinessAnalytics } from '../api/analytics';
+import type { UserAnalyticsResponse, BusinessAnalyticsResponse } from '../types/analytics';
 import { PageHeader, TableCard, LoadingState } from '../components/Layout';
+import { formatMoney } from '../types';
 
 type Preset = '7d' | '30d' | '90d' | '365d' | 'custom';
 
@@ -42,6 +43,18 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
+function KpiCard({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
+  return (
+    <div style={{
+      background: highlight ? '#f3eefe' : '#fafafa',
+      border: `1px solid ${highlight ? '#e0d4fd' : '#ececf0'}`,
+      borderRadius: 12, padding: '16px 20px', flex: 1, minWidth: 0,
+    }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: highlight ? '#6d28d9' : '#71717a', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: highlight ? '#6d28d9' : '#18181b' }}>{value}</div>
+    </div>
+  );
+}
 
 export function AnalyticsPage() {
   const { t } = useLanguage();
@@ -55,6 +68,10 @@ export function AnalyticsPage() {
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
 
+  const [bizData, setBizData] = useState<BusinessAnalyticsResponse | null>(null);
+  const [bizLoading, setBizLoading] = useState(false);
+  const [bizError, setBizError] = useState<string | null>(null);
+
   const resolvedRange = useCallback((): { from: Date; to: Date } => {
     if (preset === 'custom') {
       return { from: startOfDay(new Date(customFrom)), to: endOfDay(new Date(customTo)) };
@@ -63,23 +80,37 @@ export function AnalyticsPage() {
     return { from: daysAgo(days), to: endOfDay(new Date()) };
   }, [preset, customFrom, customTo]);
 
-  const fetchUserAnalytics = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     const { from, to } = resolvedRange();
+
     setUserLoading(true);
     setUserError(null);
-    try {
-      const data = await getUserAnalytics(from, to);
-      setUserData(data);
-    } catch {
+    setBizLoading(true);
+    setBizError(null);
+
+    const [userResult, bizResult] = await Promise.allSettled([
+      getUserAnalytics(from, to),
+      getBusinessAnalytics(from, to),
+    ]);
+
+    if (userResult.status === 'fulfilled') {
+      setUserData(userResult.value);
+    } else {
       setUserError(t('analytics_load_failed'));
-    } finally {
-      setUserLoading(false);
     }
+    setUserLoading(false);
+
+    if (bizResult.status === 'fulfilled') {
+      setBizData(bizResult.value);
+    } else {
+      setBizError(t('analytics_load_failed'));
+    }
+    setBizLoading(false);
   }, [resolvedRange, t]);
 
   useEffect(() => {
-    fetchUserAnalytics();
-  }, [fetchUserAnalytics]);
+    fetchAll();
+  }, [fetchAll]);
 
   const presets: Preset[] = ['7d', '30d', '90d', '365d'];
   const presetLabels: Record<Preset, string> = {
@@ -228,11 +259,149 @@ export function AnalyticsPage() {
     </>
   );
 
+  const bizSection = (
+    <>
+      <div style={{ height: 1, background: '#ececf0', margin: '8px 0 28px 0' }} />
+      <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b', marginBottom: 16 }}>{t('analytics_business_section')}</div>
+
+      {bizLoading && <LoadingState />}
+      {bizError && <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 16 }}>{bizError}</div>}
+
+      {!bizLoading && bizData && (
+        <>
+          {/* Inventory sub-section */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#52525b', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            {t('analytics_inventory_stock')}
+          </div>
+
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+            <KpiCard
+              label={t('analytics_below_minimum_count')}
+              value={bizData.inventoryMetrics.belowMinimumCount}
+              highlight={bizData.inventoryMetrics.belowMinimumCount > 0}
+            />
+          </div>
+
+          <SectionCard title={t('analytics_inventory_stock')}>
+            {bizData.inventoryMetrics.currentStockPerProduct.length === 0 ? (
+              <div style={{ color: '#a1a1aa', fontSize: 13 }}>{t('analytics_no_data')}</div>
+            ) : (
+              <TableCard>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '10px 18px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 16 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('analytics_col_product')}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('analytics_col_current_stock')}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('analytics_col_min_stock')}</div>
+                </div>
+                {bizData.inventoryMetrics.currentStockPerProduct.map((p, i) => {
+                  const belowMin = p.currentStock < p.minimumStock;
+                  return (
+                    <div
+                      key={p.productPublicId}
+                      style={{
+                        display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 16,
+                        padding: '11px 18px',
+                        borderBottom: i < bizData.inventoryMetrics.currentStockPerProduct.length - 1 ? '1px solid #ececf0' : 'none',
+                        background: belowMin ? '#fff8f8' : 'transparent',
+                      }}
+                    >
+                      <span style={{ fontSize: 13, color: '#18181b', fontWeight: 600 }}>{p.productName}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: belowMin ? '#dc2626' : '#18181b', textAlign: 'right' }}>{p.currentStock}</span>
+                      <span style={{ fontSize: 13, color: '#71717a', textAlign: 'right' }}>{p.minimumStock}</span>
+                    </div>
+                  );
+                })}
+              </TableCard>
+            )}
+          </SectionCard>
+
+          <SectionCard title={t('analytics_stock_movement')}>
+            {bizData.inventoryMetrics.stockMovement.length === 0 ? (
+              <div style={{ color: '#a1a1aa', fontSize: 13 }}>{t('analytics_no_data')}</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={bizData.inventoryMetrics.stockMovement.map(s => ({
+                    ...s,
+                    date: s.date.slice(0, 10),
+                  }))}
+                  margin={{ top: 4, right: 16, left: -10, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ececf0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#a1a1aa' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#a1a1aa' }} />
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #ececf0' }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="inQuantity" fill="#16a34a" radius={[3, 3, 0, 0]} name={t('analytics_in_quantity')} />
+                  <Bar dataKey="outQuantity" fill="#dc2626" radius={[3, 3, 0, 0]} name={t('analytics_out_quantity')} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </SectionCard>
+
+          {/* Orders sub-section */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#52525b', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            {t('orders_subtitle')}
+          </div>
+
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+            <KpiCard label={t('analytics_total_orders')} value={bizData.orderMetrics.totalCount} />
+            <KpiCard label={t('analytics_total_value')} value={formatMoney(bizData.orderMetrics.totalValue)} highlight />
+          </div>
+
+          <SectionCard title={t('analytics_order_status')}>
+            {bizData.orderMetrics.statusBreakdown.length === 0 ? (
+              <div style={{ color: '#a1a1aa', fontSize: 13 }}>{t('analytics_no_data')}</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={bizData.orderMetrics.statusBreakdown} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ececf0" />
+                  <XAxis dataKey="status" tick={{ fontSize: 11, fill: '#a1a1aa' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#a1a1aa' }} />
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #ececf0' }} />
+                  <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} name={t('analytics_order_status')} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </SectionCard>
+
+          <SectionCard title={t('analytics_top_suppliers')}>
+            {bizData.orderMetrics.topSuppliers.length === 0 ? (
+              <div style={{ color: '#a1a1aa', fontSize: 13 }}>{t('analytics_no_data')}</div>
+            ) : (
+              <TableCard>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '10px 18px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 16 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('analytics_col_supplier')}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('analytics_col_orders')}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('analytics_col_value')}</div>
+                </div>
+                {bizData.orderMetrics.topSuppliers.map((s, i) => (
+                  <div
+                    key={s.supplierPublicId}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 16,
+                      padding: '11px 18px',
+                      borderBottom: i < bizData.orderMetrics.topSuppliers.length - 1 ? '1px solid #ececf0' : 'none',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: '#18181b', fontWeight: 600 }}>{s.supplierName}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#18181b', textAlign: 'right' }}>{s.orderCount}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#6d28d9', textAlign: 'right' }}>{formatMoney(s.totalValue)}</span>
+                  </div>
+                ))}
+              </TableCard>
+            )}
+          </SectionCard>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div>
       <PageHeader title={t('nav_analytics')} subtitle={t('analytics_subtitle')} />
       {timeRangeSelector}
       {userSection}
+      {bizSection}
     </div>
   );
 }
