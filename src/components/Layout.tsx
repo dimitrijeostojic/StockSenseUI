@@ -250,6 +250,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink
             key={item.to}
             to={item.to}
+            data-tour={`nav-${item.to.slice(1)}`}
             onClick={isMobile ? closeSidebar : undefined}
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 11, height: 40,

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Joyride } from 'react-joyride';
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -12,6 +13,7 @@ import { formatDate, formatMoney } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PageHeader, LoadingState, StatusBadge, TableCard } from '../components/Layout';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useTour } from '../hooks/useTour';
 
 type Preset = '7d' | '30d' | '90d' | '365d' | 'custom';
 
@@ -37,9 +39,9 @@ function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({ title, children, dataTour }: { title: string; children: React.ReactNode; dataTour?: string }) {
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #ececf0', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+    <div data-tour={dataTour} style={{ background: '#ffffff', border: '1px solid #ececf0', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
       <div style={{ fontSize: 15, fontWeight: 800, color: '#18181b', marginBottom: 16 }}>{title}</div>
       {children}
     </div>
@@ -49,6 +51,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 export function DashboardPage() {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
+  const { run, steps, handleEvent } = useTour();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
@@ -104,6 +107,20 @@ export function DashboardPage() {
 
   return (
     <>
+      <Joyride
+        run={run}
+        steps={steps}
+        onEvent={handleEvent}
+        continuous
+        options={{
+          buttons: ['back', 'close', 'primary', 'skip'],
+          skipBeacon: true,
+          overlayClickAction: false,
+          primaryColor: '#6d28d9',
+          overlayColor: 'rgba(0,0,0,0.5)',
+          zIndex: 10000,
+        }}
+      />
       <PageHeader title={t('nav_dashboard')} subtitle={todayLabel} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 24 }}>
@@ -156,7 +173,7 @@ export function DashboardPage() {
 
       {data && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 16, marginBottom: 22 }}>
+          <div data-tour="dashboard-kpi" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 16, marginBottom: 22 }}>
             <KpiCard label={t('total_products')} value={String(data.numberOfProducts)} />
             <KpiCard label={t('low_stock_items')} value={String(data.lowStockProducts)} valueColor="#dc2626" />
             <KpiCard label={t('active_orders')} value={String(data.numOfActiveOrders)} />
@@ -217,7 +234,7 @@ export function DashboardPage() {
 
           {bizData && (
             <>
-              <SectionCard title={t('analytics_stock_movement')}>
+              <SectionCard title={t('analytics_stock_movement')} dataTour="dashboard-stock-chart">
                 {bizData.inventoryMetrics.stockMovement.length === 0 ? (
                   <div style={{ color: '#a1a1aa', fontSize: 13 }}>{t('analytics_no_data')}</div>
                 ) : (

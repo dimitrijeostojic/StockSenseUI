@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { login as apiLogin, register as apiRegister, logoutApi } from '../api/auth';
 import { getMyUser } from '../api/users';
+import { getMyTenant } from '../api/tenant';
 import type { LoginRequest, RegisterRequest } from '../types';
 
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
@@ -18,10 +19,12 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  hasSeenOnboarding: boolean | null;
   login: (req: LoginRequest) => Promise<void>;
   register: (req: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (patch: Partial<AuthUser>) => void;
+  markOnboardingComplete: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -58,6 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return merged;
   });
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    getMyTenant()
+      .then(t => setHasSeenOnboarding(t.hasSeenOnboarding))
+      .catch(() => setHasSeenOnboarding(true));
+  }, []);
 
   const login = useCallback(async (req: LoginRequest) => {
     const res = await apiLogin(req);
@@ -69,6 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile = await getMyUser();
       authUser = { ...authUser, firstName: profile.firstName, lastName: profile.lastName, username: profile.username };
     } catch { /* proceed without profile details */ }
+    try {
+      const tenant = await getMyTenant();
+      setHasSeenOnboarding(tenant.hasSeenOnboarding);
+    } catch { setHasSeenOnboarding(true); }
     localStorage.setItem('authUser', JSON.stringify(authUser));
     setUser(authUser);
   }, []);
@@ -86,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('authUser');
     setUser(null);
+    setHasSeenOnboarding(null);
   }, []);
 
   const updateUser = useCallback((patch: Partial<AuthUser>) => {
@@ -97,10 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const markOnboardingComplete = useCallback(() => {
+    setHasSeenOnboarding(true);
+  }, []);
+
   const isAdmin = user?.role === 'Admin';
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin, hasSeenOnboarding, login, register, logout, updateUser, markOnboardingComplete }}>
       {children}
     </AuthContext.Provider>
   );
