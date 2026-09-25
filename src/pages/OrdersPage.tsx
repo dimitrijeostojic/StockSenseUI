@@ -3,9 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { Step } from 'react-joyride';
 import { PageTour } from '../components/PageTour';
 import { getOrders, getOrderById, createOrder, updateOrder, updateOrderStatus, deleteOrder, exportOrderPdf } from '../api/orders';
+import { createGoodsReceipt, getGoodsReceiptByOrderId, exportGoodsReceiptPdf } from '../api/goodsReceipts';
 import { getProducts } from '../api/products';
 import { getSuppliers } from '../api/suppliers';
-import type { OrderListDto, OrderDetailDto, ProductDto, SupplierDto } from '../types';
+import type { OrderListDto, OrderDetailDto, ProductDto, SupplierDto, GoodsReceiptDto } from '../types';
 import { formatDate, formatMoney, formatAmount } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -61,6 +62,20 @@ interface EditOrderModalState {
   items: OrderItem[];
 }
 
+interface GoodsReceiptItem {
+  orderItemPublicId: string;
+  productName: string;
+  orderedQuantity: number;
+  receivedQuantity: string;
+}
+
+interface GoodsReceiptModalState {
+  orderPublicId: string;
+  supplierName: string;
+  items: GoodsReceiptItem[];
+  notes: string;
+}
+
 interface Query {
   pageNumber: number;
   pageSize: number;
@@ -96,6 +111,11 @@ export function OrdersPage() {
   const [deleting, setDeleting] = useState(false);
   const [editModal, setEditModal] = useState<EditOrderModalState | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [grModal, setGrModal] = useState<GoodsReceiptModalState | null>(null);
+  const [goodsReceipts, setGoodsReceipts] = useState<Record<string, GoodsReceiptDto>>({});
+  const [exportingGrPdf, setExportingGrPdf] = useState(false);
+  const [savingGr, setSavingGr] = useState(false);
+  const [grApiError, setGrApiError] = useState<string[]>([]);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(q => q.search === searchInput ? q : { ...q, search: searchInput, pageNumber: 1 }), 400);
@@ -139,6 +159,17 @@ export function OrdersPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load goods receipt when detail modal opens for a Received order
+  useEffect(() => {
+    if (!detailId) return;
+    const detail = orderDetails[detailId];
+    if (detail?.orderStatus !== 3) return;
+    getGoodsReceiptByOrderId(detailId)
+      .then(gr => setGoodsReceipts(prev => prev[detailId] ? prev : { ...prev, [detailId]: gr }))
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailId, orderDetails]);
 
   // Open order detail from dashboard
   useEffect(() => {
@@ -322,6 +353,50 @@ export function OrdersPage() {
     }, 0);
   };
 
+  const openReceive = async (o: OrderListDto) => {
+    const detail = await getDetail(o.publicId);
+    if (!detail) { showToast(t('order_load_failed')); return; }
+    setGrApiError([]);
+    setGrModal({
+      orderPublicId: o.publicId,
+      supplierName: o.supplierName,
+      items: detail.orderItems.map(it => ({
+        orderItemPublicId: it.orderItemPublicId,
+        productName: it.productName,
+        orderedQuantity: it.quantity,
+        receivedQuantity: String(it.quantity),
+      })),
+      notes: '',
+    });
+  };
+
+  const saveGoodsReceipt = async () => {
+    if (!grModal) return;
+    setSavingGr(true);
+    setGrApiError([]);
+    try {
+      await createGoodsReceipt(grModal.orderPublicId, {
+        notes: grModal.notes || undefined,
+        items: grModal.items.map(it => ({
+          orderItemPublicId: it.orderItemPublicId,
+          receivedQuantity: parseInt(it.receivedQuantity) || 0,
+        })),
+      });
+      await updateOrderStatus(grModal.orderPublicId, 3);
+      showToast(t('order_received_toast'));
+      const closedOrderId = grModal.orderPublicId;
+      setGrModal(null);
+      setOrderDetails(prev => { const next = { ...prev }; delete next[closedOrderId]; return next; });
+      await load();
+    } catch (err) {
+      const errs = extractApiErrors(err);
+      if (errs.length) setGrApiError(errs);
+      else showToast(t('goods_receipt_failed'));
+    } finally {
+      setSavingGr(false);
+    }
+  };
+
   const GRID = '1.6fr 1fr 1fr 1fr 1.6fr';
 
   return (
@@ -408,7 +483,7 @@ export function OrdersPage() {
                 <ActionBtn onClick={() => openDuplicate(o)}>{t('btn_duplicate')}</ActionBtn>
                 {o.orderStatus === 1 && <ActionBtn onClick={() => openEdit(o)}>{t('edit')}</ActionBtn>}
                 {o.orderStatus === 1 && <ActionBtn variant="blue" onClick={() => transition(o.publicId, 2, t('order_confirmed_toast'))}>{t('btn_confirm')}</ActionBtn>}
-                {o.orderStatus === 2 && <ActionBtn variant="green" onClick={() => transition(o.publicId, 3, t('order_received_toast'))}>{t('btn_receive')}</ActionBtn>}
+                {o.orderStatus === 2 && <ActionBtn variant="green" onClick={() => openReceive(o)}>{t('btn_receive')}</ActionBtn>}
                 {(o.orderStatus === 1 || o.orderStatus === 2) && <ActionBtn variant="danger" onClick={() => transition(o.publicId, 4, t('order_cancelled_toast'))}>{t('btn_cancel_order')}</ActionBtn>}
                 {o.orderStatus === 4 && <ActionBtn variant="danger" onClick={() => setConfirmId(o.publicId)}>{t('delete')}</ActionBtn>}
               </div>
@@ -555,8 +630,53 @@ export function OrdersPage() {
                   <div style={{ fontSize: 19, fontWeight: 800, color: '#18181b' }}>{formatAmount(total ?? 0, detail.currency)}</div>
                 </div>
 
+                {detail.orderStatus === 3 && goodsReceipts[detailId!] && (() => {
+                  const gr = goodsReceipts[detailId!];
+                  return (
+                    <div style={{ marginTop: 20 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46' }}>{t('goods_receipt_section')}</div>
+                        <div style={{ fontSize: 12, color: '#71717a' }}>{t('received_on')}: {formatDate(gr.receivedAt, locale)}</div>
+                      </div>
+                      <div style={{ border: '1px solid #ececf0', borderRadius: 10, overflow: 'hidden' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr', padding: '9px 14px', background: '#fafafa', borderBottom: '1px solid #ececf0' }}>
+                          {[t('col_product'), t('col_ordered'), t('col_received'), t('col_difference')].map((h, i) => (
+                            <div key={h} style={{ fontSize: 11, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: i > 0 ? 'right' : 'left' }}>{h}</div>
+                          ))}
+                        </div>
+                        {gr.items.map((it, i) => {
+                          const diff = it.receivedQuantity - it.orderedQuantity;
+                          return (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 0.6fr 0.6fr 0.6fr', padding: '11px 14px', borderBottom: i < gr.items.length - 1 ? '1px solid #f5f4f7' : 'none', alignItems: 'center' }}>
+                              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#18181b' }}>{it.productName}</div>
+                              <div style={{ fontSize: 13, color: '#52525b', textAlign: 'right' }}>{it.orderedQuantity}</div>
+                              <div style={{ fontSize: 13, color: '#52525b', textAlign: 'right' }}>{it.receivedQuantity}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, textAlign: 'right', color: diff === 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#2563eb' }}>
+                                {diff > 0 ? `+${diff}` : diff}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {gr.notes && <div style={{ fontSize: 12.5, color: '#52525b', marginTop: 10 }}><strong>{t('notes')}:</strong> {gr.notes}</div>}
+                    </div>
+                  );
+                })()}
+
                 <ModalActions>
                   <BtnSecondary onClick={() => setDetailId(null)}>{t('close')}</BtnSecondary>
+                  {detail.orderStatus === 3 && (
+                    <BtnPrimary
+                      disabled={exportingGrPdf}
+                      style={{ background: exportingGrPdf ? '#a1a1aa' : '#16a34a' }}
+                      onClick={async () => {
+                        setExportingGrPdf(true);
+                        try { await exportGoodsReceiptPdf(detailId!); }
+                        catch { showToast(t('export_gr_pdf_failed')); }
+                        finally { setExportingGrPdf(false); }
+                      }}
+                    >{exportingGrPdf ? '…' : t('export_gr_pdf')}</BtnPrimary>
+                  )}
                   <BtnPrimary
                     disabled={exportingPdf}
                     onClick={async () => {
@@ -572,6 +692,64 @@ export function OrdersPage() {
           </Modal>
         );
       })()}
+
+      {/* Goods Receipt Modal */}
+      <Modal open={!!grModal} onClose={() => { setGrModal(null); setGrApiError([]); }} width={560}>
+        {grModal && (
+          <>
+            <ModalTitle>{t('goods_receipt_title')}</ModalTitle>
+            <div style={{ fontSize: 13, color: '#71717a', marginBottom: 16 }}>{grModal.supplierName}</div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3f3f46' }}>{t('items_label')}</div>
+              <button
+                onClick={() => setGrModal(prev => prev ? { ...prev, items: prev.items.map(it => ({ ...it, receivedQuantity: String(it.orderedQuantity) })) } : null)}
+                style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #d4d4d8', background: '#ffffff', color: '#71717a', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>
+                {t('fill_all_ordered')}
+              </button>
+            </div>
+
+            <div style={{ border: '1px solid #ececf0', borderRadius: 10, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 110px', padding: '9px 14px', background: '#fafafa', borderBottom: '1px solid #ececf0' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_product')}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'center' }}>{t('col_ordered')}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'center' }}>{t('col_received')}</div>
+              </div>
+              {grModal.items.map((it, idx) => (
+                <div key={it.orderItemPublicId} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 110px', padding: '10px 14px', borderBottom: idx < grModal.items.length - 1 ? '1px solid #f5f4f7' : 'none', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.productName}</div>
+                  <div style={{ fontSize: 13, color: '#52525b', textAlign: 'center', fontWeight: 600 }}>{it.orderedQuantity}</div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={it.orderedQuantity}
+                    value={it.receivedQuantity}
+                    onChange={e => {
+                      const val = Math.min(Math.max(parseInt(e.target.value) || 0, 0), it.orderedQuantity);
+                      setGrModal(prev => prev ? { ...prev, items: prev.items.map((item, i) => i === idx ? { ...item, receivedQuantity: String(val) } : item) } : null);
+                    }}
+                    style={{ height: 34, borderRadius: 8, border: '1px solid #e4e4e7', padding: '0 10px', fontSize: 13, fontFamily: 'inherit', background: '#ffffff', color: '#18181b', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <Field label={t('goods_receipt_notes')} optional>
+              <Input
+                placeholder="Optional note"
+                value={grModal.notes}
+                onChange={e => setGrModal(prev => prev ? { ...prev, notes: e.target.value } : null)}
+              />
+            </Field>
+
+            <ApiErrorBox errors={grApiError} />
+            <ModalActions>
+              <BtnSecondary onClick={() => { setGrModal(null); setGrApiError([]); }}>{t('cancel')}</BtnSecondary>
+              <BtnPrimary onClick={saveGoodsReceipt} disabled={savingGr}>{savingGr ? '…' : t('save_and_receive')}</BtnPrimary>
+            </ModalActions>
+          </>
+        )}
+      </Modal>
 
       {/* New Order Modal */}
       <Modal open={!!modal} onClose={() => { setModal(null); setApiError([]); }} width={560}>

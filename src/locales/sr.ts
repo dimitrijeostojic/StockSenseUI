@@ -202,11 +202,25 @@ export const sr: Record<TranslationKey, string> = {
   order_received_toast: 'Narudžbina primljena',
   order_cancelled_toast: 'Narudžbina otkazana',
   order_transition_failed: 'Greška pri ažuriranju narudžbine',
-  export_pdf: 'Izvezi PDF',
+  export_pdf: 'Izvezi narudžbenicu',
   btn_duplicate: 'Dupliraj',
   order_duplicated: 'Narudžbina duplicirana — pregledajte i potvrdite',
   order_duplicate_skipped: 'Neki arhivirani proizvodi su uklonjeni iz duplikata.',
   export_pdf_failed: 'Greška pri izvozu PDF-a',
+
+  // Goods Receipt
+  goods_receipt_title: 'Unos prijemnice',
+  goods_receipt_notes: 'Napomena prijemnice',
+  col_ordered: 'Naručeno',
+  col_received: 'Primljeno',
+  col_difference: 'Razlika',
+  fill_all_ordered: 'Popuni sve kao naručeno',
+  save_and_receive: 'Sačuvaj i označi kao primljeno',
+  goods_receipt_failed: 'Greška pri čuvanju prijemnice',
+  goods_receipt_section: 'Prijemnica',
+  received_on: 'Primljeno dana',
+  export_gr_pdf: 'Izvezi prijemnicu PDF',
+  export_gr_pdf_failed: 'Greška pri izvozu prijemnice PDF',
 
   // Users
   users_subtitle: 'Upravljajte korisnicima u vašem nalogu',

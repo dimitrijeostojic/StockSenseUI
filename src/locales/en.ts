@@ -200,11 +200,25 @@ export const en = {
   order_received_toast: 'Order received',
   order_cancelled_toast: 'Order cancelled',
   order_transition_failed: 'Failed to update order',
-  export_pdf: 'Export PDF',
+  export_pdf: 'Export Purchase Order',
   export_pdf_failed: 'Failed to export PDF',
   btn_duplicate: 'Duplicate',
   order_duplicated: 'Order duplicated — review and confirm',
   order_duplicate_skipped: 'Some archived products were removed from the duplicate.',
+
+  // Goods Receipt
+  goods_receipt_title: 'Record Goods Receipt',
+  goods_receipt_notes: 'Receipt notes',
+  col_ordered: 'Ordered',
+  col_received: 'Received',
+  col_difference: 'Difference',
+  fill_all_ordered: 'Fill all as ordered',
+  save_and_receive: 'Save & Mark as Received',
+  goods_receipt_failed: 'Failed to save goods receipt',
+  goods_receipt_section: 'Goods Receipt',
+  received_on: 'Received on',
+  export_gr_pdf: 'Export GR PDF',
+  export_gr_pdf_failed: 'Failed to export GR PDF',
 
   // Users
   users_subtitle: 'Manage users in your tenant',
