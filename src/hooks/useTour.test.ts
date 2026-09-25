@@ -8,37 +8,37 @@ vi.mock('../contexts/AuthContext');
 vi.mock('../api/tenant');
 
 import { useAuth } from '../contexts/AuthContext';
-import { completeOnboarding } from '../api/tenant';
+import { completeTour } from '../api/tenant';
 
 const mockUseAuth = vi.mocked(useAuth);
-const mockCompleteOnboarding = vi.mocked(completeOnboarding);
+const mockCompleteTour = vi.mocked(completeTour);
 
 function makeTourEndEvent(): EventData {
   return { type: EVENTS.TOUR_END } as EventData;
 }
 
-function mockAuth(hasSeenOnboarding: boolean | null) {
-  const markOnboardingComplete = vi.fn();
+function mockAuth(seenTourPages: string[] | null) {
+  const markTourComplete = vi.fn();
   mockUseAuth.mockReturnValue({
-    hasSeenOnboarding,
-    markOnboardingComplete,
+    seenTourPages,
+    markTourComplete,
   } as unknown as ReturnType<typeof useAuth>);
-  return { markOnboardingComplete };
+  return { markTourComplete };
 }
 
 describe('useTour', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    mockCompleteOnboarding.mockResolvedValue(undefined);
+    mockCompleteTour.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('does not start when hasSeenOnboarding is true', () => {
-    mockAuth(true);
+  it('does not start when dashboard is in seenTourPages', () => {
+    mockAuth(['dashboard']);
     const { result } = renderHook(() => useTour());
 
     act(() => { vi.advanceTimersByTime(1000); });
@@ -46,7 +46,7 @@ describe('useTour', () => {
     expect(result.current.run).toBe(false);
   });
 
-  it('does not start when hasSeenOnboarding is null (loading)', () => {
+  it('does not start when seenTourPages is null (loading)', () => {
     mockAuth(null);
     const { result } = renderHook(() => useTour());
 
@@ -55,8 +55,8 @@ describe('useTour', () => {
     expect(result.current.run).toBe(false);
   });
 
-  it('starts after 600ms when hasSeenOnboarding is false', () => {
-    mockAuth(false);
+  it('starts after 600ms when dashboard is not in seenTourPages', () => {
+    mockAuth([]);
     const { result } = renderHook(() => useTour());
 
     expect(result.current.run).toBe(false);
@@ -66,63 +66,63 @@ describe('useTour', () => {
     expect(result.current.run).toBe(true);
   });
 
-  it('skip (TOUR_END) calls completeOnboarding once', async () => {
-    const { markOnboardingComplete } = mockAuth(false);
+  it('skip (TOUR_END) calls completeTour with dashboard', async () => {
+    const { markTourComplete } = mockAuth([]);
     const { result } = renderHook(() => useTour());
 
     await act(async () => {
       await result.current.handleEvent(makeTourEndEvent());
     });
 
-    expect(mockCompleteOnboarding).toHaveBeenCalledOnce();
-    expect(markOnboardingComplete).toHaveBeenCalledOnce();
+    expect(mockCompleteTour).toHaveBeenCalledWith('dashboard');
+    expect(markTourComplete).toHaveBeenCalledWith('dashboard');
   });
 
-  it('finish (TOUR_END) calls completeOnboarding once', async () => {
-    const { markOnboardingComplete } = mockAuth(false);
+  it('finish (TOUR_END) calls completeTour with dashboard', async () => {
+    const { markTourComplete } = mockAuth([]);
     const { result } = renderHook(() => useTour());
 
     await act(async () => {
       await result.current.handleEvent(makeTourEndEvent());
     });
 
-    expect(mockCompleteOnboarding).toHaveBeenCalledOnce();
-    expect(markOnboardingComplete).toHaveBeenCalledOnce();
+    expect(mockCompleteTour).toHaveBeenCalledWith('dashboard');
+    expect(markTourComplete).toHaveBeenCalledWith('dashboard');
   });
 
-  it('marks onboarding complete in context even when API call fails', async () => {
-    mockCompleteOnboarding.mockRejectedValue(new Error('Network error'));
-    const { markOnboardingComplete } = mockAuth(false);
+  it('marks tour complete in context even when API call fails', async () => {
+    mockCompleteTour.mockRejectedValue(new Error('Network error'));
+    const { markTourComplete } = mockAuth([]);
     const { result } = renderHook(() => useTour());
 
     await act(async () => {
       await result.current.handleEvent(makeTourEndEvent());
     });
 
-    expect(markOnboardingComplete).toHaveBeenCalledOnce();
+    expect(markTourComplete).toHaveBeenCalledWith('dashboard');
   });
 
-  it('marks onboarding complete in context when API call succeeds', async () => {
-    mockCompleteOnboarding.mockResolvedValue(undefined);
-    const { markOnboardingComplete } = mockAuth(false);
+  it('marks tour complete in context when API call succeeds', async () => {
+    mockCompleteTour.mockResolvedValue(undefined);
+    const { markTourComplete } = mockAuth([]);
     const { result } = renderHook(() => useTour());
 
     await act(async () => {
       await result.current.handleEvent(makeTourEndEvent());
     });
 
-    expect(markOnboardingComplete).toHaveBeenCalledOnce();
+    expect(markTourComplete).toHaveBeenCalledWith('dashboard');
   });
 
   it('ignores non-TOUR_END events', async () => {
-    const { markOnboardingComplete } = mockAuth(false);
+    const { markTourComplete } = mockAuth([]);
     const { result } = renderHook(() => useTour());
 
     await act(async () => {
       await result.current.handleEvent({ type: EVENTS.STEP_AFTER } as EventData);
     });
 
-    expect(mockCompleteOnboarding).not.toHaveBeenCalled();
-    expect(markOnboardingComplete).not.toHaveBeenCalled();
+    expect(mockCompleteTour).not.toHaveBeenCalled();
+    expect(markTourComplete).not.toHaveBeenCalled();
   });
 });

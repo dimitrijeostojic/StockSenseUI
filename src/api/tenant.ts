@@ -6,7 +6,7 @@ export interface TenantDto {
   pib: string;
   address?: string;
   logo?: string; // base64
-  hasSeenOnboarding: boolean;
+  seenTourPages: string[];
 }
 
 export interface UpdateTenantBody {
@@ -29,6 +29,6 @@ export async function updateTenant(body: UpdateTenantBody): Promise<TenantDto> {
   return data;
 }
 
-export async function completeOnboarding(): Promise<void> {
-  await apiClient.post('/api/tenant/complete-onboarding');
+export async function completeTour(pageName: string): Promise<void> {
+  await apiClient.post(`/api/tour/complete/${pageName}`);
 }

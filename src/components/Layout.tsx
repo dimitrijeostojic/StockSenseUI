@@ -593,7 +593,7 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+export function PageHeader({ title, subtitle, action, onTourStart }: { title: string; subtitle?: string; action?: ReactNode; onTourStart?: () => void }) {
   const isMobile = useIsMobile();
   return (
     <div style={{
@@ -608,7 +608,25 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
         <div style={{ fontSize: 23, fontWeight: 800, color: '#18181b', letterSpacing: '-0.02em' }}>{title}</div>
         {subtitle && <div style={{ fontSize: 13.5, color: '#71717a', marginTop: 3 }}>{subtitle}</div>}
       </div>
-      {action}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {action}
+        {onTourStart && (
+          <button
+            onClick={onTourStart}
+            aria-label="Start page tour"
+            style={{
+              width: 34, height: 34, borderRadius: '50%', border: '2px solid #6d28d9',
+              background: '#ffffff', color: '#6d28d9', fontSize: 16, fontWeight: 800,
+              fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', flexShrink: 0, lineHeight: 1,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#6d28d9'; (e.currentTarget as HTMLButtonElement).style.color = '#ffffff'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ffffff'; (e.currentTarget as HTMLButtonElement).style.color = '#6d28d9'; }}
+          >
+            ?
+          </button>
+        )}
+      </div>
     </div>
   );
 }
