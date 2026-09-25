@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+import type { Step } from 'react-joyride';
+import { PageTour } from '../components/PageTour';
 import { getUsers, deleteUser, registerUser } from '../api/users';
 import type { UserDto, AdminRegisterUserRequest } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -7,6 +9,23 @@ import { PageHeader, TableCard, ActionBtn, LoadingState, EmptyState, AddButton }
 import { Modal, ModalTitle, ModalActions, Field, Input, PasswordInput, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
 import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { usePageTour } from '../hooks/usePageTour';
+
+const TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="users-add"]',
+    content: 'Register a new user — give them access to StockSense under your tenant.',
+  },
+  {
+    target: '[data-tour="users-table"]',
+    content: 'All users in your organization with their roles and contact details.',
+    placement: 'center',
+  },
+  {
+    target: '[data-tour="users-actions"]',
+    content: 'Remove non-admin users from your organization here.',
+  },
+];
 
 function RoleBadge({ roles }: { roles: string[] }) {
   const { t } = useLanguage();
@@ -28,6 +47,7 @@ const EMPTY_FORM: AdminRegisterUserRequest = { firstName: '', lastName: '', user
 export function UsersPage() {
   const { showToast } = useToast();
   const { t } = useLanguage();
+  const { run, steps, handleEvent, startTour } = usePageTour('users', TOUR_STEPS);
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -141,17 +161,21 @@ export function UsersPage() {
         </ModalActions>
       </Modal>
 
+      <PageTour run={run} steps={steps} onEvent={handleEvent} />
       <PageHeader
         title={t('nav_users')}
         subtitle={t('users_subtitle')}
-        action={<AddButton onClick={() => { setErrors({}); setApiError([]); setForm(EMPTY_FORM); setModalOpen(true); }} label={t('register_user_btn')} />}
+        onTourStart={startTour}
+        action={<div data-tour="users-add"><AddButton onClick={() => { setErrors({}); setApiError([]); setForm(EMPTY_FORM); setModalOpen(true); }} label={t('register_user_btn')} /></div>}
       />
 
+      <div data-tour="users-table">
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 560 : undefined }}>
-          {[t('name'), t('field_username'), t('email'), t('col_role'), t('actions')].map((h, i) => (
-            <div key={h} style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: i === 4 ? 'right' : 'left' }}>{h}</div>
+          {[t('name'), t('field_username'), t('email'), t('col_role')].map(h => (
+            <div key={h} style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</div>
           ))}
+          <div data-tour="users-actions" style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
@@ -180,6 +204,7 @@ export function UsersPage() {
           );
         })}
       </TableCard>
+      </div>
     </>
   );
 }

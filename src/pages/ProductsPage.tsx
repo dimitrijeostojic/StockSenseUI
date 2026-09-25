@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { Step } from 'react-joyride';
+import { PageTour } from '../components/PageTour';
 import { getProducts, createProduct, updateProduct, deleteProduct, createStockEntry, bulkImportProducts } from '../api/products';
 import type { BulkImportResult, UpdateProductBody } from '../api/products';
 import { getCategories } from '../api/categories';
@@ -13,6 +15,31 @@ import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnS
 import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { UOM_KEYS } from '../types';
+import { usePageTour } from '../hooks/usePageTour';
+
+const TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="products-add"]',
+    content: 'Add a new product to your catalog — set the name, SKU, price, and stock details.',
+  },
+  {
+    target: '[data-tour="products-search"]',
+    content: 'Search products by name or description to quickly find what you need.',
+  },
+  {
+    target: '[data-tour="products-filters"]',
+    content: 'Filter by category and sort the list to focus on the products that matter.',
+  },
+  {
+    target: '[data-tour="products-table"]',
+    content: 'Your full product catalog — stock levels, prices, and categories at a glance.',
+    placement: 'center',
+  },
+  {
+    target: '[data-tour="products-actions"]',
+    content: 'View details, adjust stock, edit, or delete a product from these action buttons.',
+  },
+];
 
 const SWATCHES = ['#6d28d9', '#2563eb', '#16a34a', '#d97706', '#db2777', '#0891b2'];
 
@@ -65,6 +92,7 @@ export function ProductsPage() {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { run, steps, handleEvent, startTour } = usePageTour('products', TOUR_STEPS);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -261,9 +289,11 @@ export function ProductsPage() {
 
   return (
     <>
+      <PageTour run={run} steps={steps} onEvent={handleEvent} />
       <PageHeader
         title={t('nav_products')}
         subtitle={`${totalCount} ${t('products_subtitle')}`}
+        onTourStart={startTour}
         action={
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -272,7 +302,9 @@ export function ProductsPage() {
             >
               {t('import_csv')}
             </button>
-            <AddButton onClick={openAdd} label={t('add_product')} />
+            <div data-tour="products-add">
+              <AddButton onClick={openAdd} label={t('add_product')} />
+            </div>
           </div>
         }
       />
@@ -280,16 +312,19 @@ export function ProductsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isMobile ? '1 1 100%' : undefined }}>
           <input
+            data-tour="products-search"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder={t('search_products')}
             style={{ height: 40, width: isMobile ? '100%' : 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
           />
-          <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setQuery(q => ({ ...q, pageNumber: 1 })); }}
-            style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
-            <option value="">{t('all_categories')}</option>
-            {categories.map(c => <option key={c.publicId} value={c.name}>{c.name}</option>)}
-          </select>
+          <div data-tour="products-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setQuery(q => ({ ...q, pageNumber: 1 })); }}
+              style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
+              <option value="">{t('all_categories')}</option>
+              {categories.map(c => <option key={c.publicId} value={c.name}>{c.name}</option>)}
+            </select>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
@@ -306,6 +341,7 @@ export function ProductsPage() {
         </div>
       </div>
 
+      <div data-tour="products-table">
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.1fr 1.3fr 0.8fr 0.7fr 1.5fr', padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 12, minWidth: isMobile ? 660 : undefined }}>
           {sortBtn(t('col_product'), 'name')}
@@ -313,7 +349,7 @@ export function ProductsPage() {
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('supplier')}</div>
           {sortBtn(t('price'), 'price')}
           {sortBtn(t('col_stock'), 'actualStockQuantity')}
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
+          <div data-tour="products-actions" style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
@@ -364,6 +400,7 @@ export function ProductsPage() {
           />
         )}
       </TableCard>
+      </div>
 
       <ConfirmModal
         open={!!confirmId}
