@@ -5,8 +5,7 @@ import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { getDashboard } from '../api/dashboard';
-import { getBusinessAnalytics } from '../api/analytics';
+import { getDashboard, getBusinessAnalytics } from '../api/dashboard';
 import type { DashboardResponse } from '../types';
 import type { BusinessAnalyticsResponse } from '../types/analytics';
 import { formatDate, formatMoney } from '../types';
