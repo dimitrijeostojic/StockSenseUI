@@ -137,10 +137,27 @@ export interface OrderDetailDto {
 }
 
 export interface OrderItemDetailDto {
+  orderItemPublicId: string;
   productPublicId: string;
   productName: string;
   quantity: number;
   unitPrice: number;
+}
+
+export interface GoodsReceiptItemDto {
+  productPublicId: string;
+  productName: string;
+  sku: string;
+  orderedQuantity: number;
+  receivedQuantity: number;
+}
+
+export interface GoodsReceiptDto {
+  publicId: string;
+  orderPublicId: string;
+  receivedAt: string;
+  notes?: string;
+  items: GoodsReceiptItemDto[];
 }
 
 export interface StockEntryDto {
