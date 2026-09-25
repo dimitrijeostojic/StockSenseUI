@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { login as apiLogin, register as apiRegister, logoutApi } from '../api/auth';
 import { getMyUser } from '../api/users';
-import { getMyTenant } from '../api/tenant';
 import type { LoginRequest, RegisterRequest } from '../types';
 
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
@@ -19,12 +18,12 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  hasSeenOnboarding: boolean | null;
+  seenTourPages: string[] | null;
   login: (req: LoginRequest) => Promise<void>;
   register: (req: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (patch: Partial<AuthUser>) => void;
-  markOnboardingComplete: () => void;
+  markTourComplete: (pageName: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -61,14 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return merged;
   });
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
+  const [seenTourPages, setSeenTourPages] = useState<string[] | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-    getMyTenant()
-      .then(t => setHasSeenOnboarding(t.hasSeenOnboarding))
-      .catch(() => setHasSeenOnboarding(true));
+    getMyUser()
+      .then(u => setSeenTourPages(u.seenTourPages ?? []))
+      .catch(() => setSeenTourPages([]));
   }, []);
 
   const login = useCallback(async (req: LoginRequest) => {
@@ -80,11 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await getMyUser();
       authUser = { ...authUser, firstName: profile.firstName, lastName: profile.lastName, username: profile.username };
-    } catch { /* proceed without profile details */ }
-    try {
-      const tenant = await getMyTenant();
-      setHasSeenOnboarding(tenant.hasSeenOnboarding);
-    } catch { setHasSeenOnboarding(true); }
+      setSeenTourPages(profile.seenTourPages ?? []);
+    } catch { setSeenTourPages([]); }
     localStorage.setItem('authUser', JSON.stringify(authUser));
     setUser(authUser);
   }, []);
@@ -102,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('authUser');
     setUser(null);
-    setHasSeenOnboarding(null);
+    setSeenTourPages(null);
   }, []);
 
   const updateUser = useCallback((patch: Partial<AuthUser>) => {
@@ -114,14 +110,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const markOnboardingComplete = useCallback(() => {
-    setHasSeenOnboarding(true);
+  const markTourComplete = useCallback((pageName: string) => {
+    setSeenTourPages(prev => prev === null ? [pageName] : prev.includes(pageName) ? prev : [...prev, pageName]);
   }, []);
 
   const isAdmin = user?.role === 'Admin';
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin, hasSeenOnboarding, login, register, logout, updateUser, markOnboardingComplete }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isAdmin, seenTourPages, login, register, logout, updateUser, markTourComplete }}>
       {children}
     </AuthContext.Provider>
   );

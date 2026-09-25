@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Joyride } from 'react-joyride';
+import { PageTour } from '../components/PageTour';
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -107,20 +107,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <Joyride
-        run={run}
-        steps={steps}
-        onEvent={handleEvent}
-        continuous
-        options={{
-          buttons: ['back', 'close', 'primary', 'skip'],
-          skipBeacon: true,
-          overlayClickAction: false,
-          primaryColor: '#6d28d9',
-          overlayColor: 'rgba(0,0,0,0.5)',
-          zIndex: 10000,
-        }}
-      />
+      <PageTour run={run} steps={steps} onEvent={handleEvent} />
       <PageHeader title={t('nav_dashboard')} subtitle={todayLabel} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 24 }}>
@@ -263,7 +250,7 @@ export function DashboardPage() {
                   <div style={{ color: '#a1a1aa', fontSize: 13 }}>{t('analytics_no_data')}</div>
                 ) : (
                   <TableCard>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', padding: '10px 18px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 110px', padding: '10px 18px', borderBottom: '1px solid #ececf0', background: '#fafafa', gap: 16 }}>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('analytics_col_supplier')}</div>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('analytics_col_orders')}</div>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('analytics_col_value')}</div>
@@ -272,7 +259,7 @@ export function DashboardPage() {
                       <div
                         key={s.supplierPublicId}
                         style={{
-                          display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 16,
+                          display: 'grid', gridTemplateColumns: '1fr 70px 110px', gap: 16,
                           padding: '11px 18px',
                           borderBottom: i < bizData.orderMetrics.topSuppliers.length - 1 ? '1px solid #ececf0' : 'none',
                         }}

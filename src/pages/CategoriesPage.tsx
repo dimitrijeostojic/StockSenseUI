@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+import type { Step } from 'react-joyride';
+import { PageTour } from '../components/PageTour';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../api/categories';
 import type { CategoryDto } from '../types';
 import { useToast } from '../contexts/ToastContext';
@@ -7,6 +9,19 @@ import { PageHeader, AddButton, LoadingState } from '../components/Layout';
 import { Modal, ModalTitle, ModalActions, Field, Input, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
 import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { usePageTour } from '../hooks/usePageTour';
+
+const TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="categories-add"]',
+    content: 'Create a new product category to keep your catalog organized.',
+  },
+  {
+    target: '[data-tour="categories-grid"]',
+    content: 'Your categories are displayed here — edit or delete them as needed.',
+    placement: 'center',
+  },
+];
 
 interface CategoryModalState {
   open: boolean;
@@ -19,6 +34,7 @@ interface CategoryModalState {
 export function CategoriesPage() {
   const { showToast } = useToast();
   const { t } = useLanguage();
+  const { run, steps, handleEvent, startTour } = usePageTour('categories', TOUR_STEPS);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<CategoryModalState | null>(null);
@@ -83,15 +99,17 @@ export function CategoriesPage() {
 
   return (
     <>
+      <PageTour run={run} steps={steps} onEvent={handleEvent} />
       <PageHeader
         title={t('nav_categories')}
         subtitle={t('categories_subtitle')}
-        action={<AddButton onClick={openAdd} label={t('add_category')} />}
+        onTourStart={startTour}
+        action={<div data-tour="categories-add"><AddButton onClick={openAdd} label={t('add_category')} /></div>}
       />
 
       {loading && <LoadingState />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'repeat(3,1fr)', gap: 16 }}>
+      <div data-tour="categories-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'repeat(3,1fr)', gap: 16 }}>
         {categories.map(c => (
           <div key={c.publicId} style={{ background: '#ffffff', border: '1px solid #ececf0', borderRadius: 16, padding: 20 }}>
             <div style={{ fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{c.name}</div>

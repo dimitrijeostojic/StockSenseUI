@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { Step } from 'react-joyride';
+import { PageTour } from '../components/PageTour';
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier, getSupplierById } from '../api/suppliers';
 import type { SupplierDto } from '../types';
 import { CURRENCY } from '../types';
@@ -9,6 +11,31 @@ import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, 
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
 import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { usePageTour } from '../hooks/usePageTour';
+
+const TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="suppliers-add"]',
+    content: 'Add a new supplier — the companies you purchase inventory from.',
+  },
+  {
+    target: '[data-tour="suppliers-search"]',
+    content: 'Search suppliers by name or contact to find them quickly.',
+  },
+  {
+    target: '[data-tour="suppliers-sort"]',
+    content: 'Sort and order the supplier list to find what you need.',
+  },
+  {
+    target: '[data-tour="suppliers-table"]',
+    content: 'All your suppliers with their contact details and currency at a glance.',
+    placement: 'center',
+  },
+  {
+    target: '[data-tour="suppliers-actions"]',
+    content: 'View supplier details, edit information, or remove a supplier.',
+  },
+];
 
 interface SupplierModalState {
   open: boolean;
@@ -37,6 +64,7 @@ export function SuppliersPage() {
   const { showToast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { run, steps, handleEvent, startTour } = usePageTour('suppliers', TOUR_STEPS);
   const [suppliers, setSuppliers] = useState<SupplierDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -145,20 +173,23 @@ export function SuppliersPage() {
 
   return (
     <>
+      <PageTour run={run} steps={steps} onEvent={handleEvent} />
       <PageHeader
         title={t('nav_suppliers')}
         subtitle={t('suppliers_subtitle')}
-        action={<AddButton onClick={openAdd} label={t('add_supplier')} />}
+        onTourStart={startTour}
+        action={<div data-tour="suppliers-add"><AddButton onClick={openAdd} label={t('add_supplier')} /></div>}
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
         <input
+          data-tour="suppliers-search"
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
           placeholder={t('search_suppliers')}
           style={{ height: 40, width: isMobile ? '100%' : 260, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
         />
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div data-tour="suppliers-sort" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <select value={query.sortBy} onChange={e => setQuery(q => ({ ...q, sortBy: e.target.value, pageNumber: 1 }))}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
             <option value="name">{t('sort_name')}</option>
@@ -172,6 +203,7 @@ export function SuppliersPage() {
         </div>
       </div>
 
+      <div data-tour="suppliers-table">
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 640 : undefined }}>
           {sortBtn(t('supplier'), 'name')}
@@ -179,7 +211,7 @@ export function SuppliersPage() {
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('email')}</div>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('phone')}</div>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('field_currency')}</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
+          <div data-tour="suppliers-actions" style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
@@ -213,6 +245,7 @@ export function SuppliersPage() {
           />
         )}
       </TableCard>
+      </div>
 
       <ConfirmModal
         open={!!confirmId}

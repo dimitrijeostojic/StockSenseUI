@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import type { Step } from 'react-joyride';
+import { PageTour } from '../components/PageTour';
 import { getOrders, getOrderById, createOrder, updateOrder, updateOrderStatus, deleteOrder, exportOrderPdf } from '../api/orders';
 import { getProducts } from '../api/products';
 import { getSuppliers } from '../api/suppliers';
@@ -11,6 +13,31 @@ import { PageHeader, AddButton, TableCard, ActionBtn, LoadingState, EmptyState, 
 import { Modal, ModalTitle, ModalActions, Field, Input, Select, BtnPrimary, BtnSecondary, ConfirmModal, ApiErrorBox } from '../components/Modal';
 import { extractApiErrors, extractErrorMessage } from '../api/client';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { usePageTour } from '../hooks/usePageTour';
+
+const TOUR_STEPS: Step[] = [
+  {
+    target: '[data-tour="orders-add"]',
+    content: 'Create a new purchase order — select a supplier and add the products you need.',
+  },
+  {
+    target: '[data-tour="orders-search"]',
+    content: 'Search orders by supplier name or reference.',
+  },
+  {
+    target: '[data-tour="orders-status-filter"]',
+    content: 'Filter orders by status — Pending, Confirmed, Received, or Cancelled.',
+  },
+  {
+    target: '[data-tour="orders-table"]',
+    content: 'All your purchase orders with supplier, date, total, and current status.',
+    placement: 'center',
+  },
+  {
+    target: '[data-tour="orders-actions"]',
+    content: 'View details, confirm, receive, duplicate, or cancel an order from here.',
+  },
+];
 
 type StatusFilter = '' | 'Pending' | 'Confirmed' | 'Received' | 'Cancelled';
 
@@ -45,6 +72,7 @@ interface Query {
 export function OrdersPage() {
   const { showToast } = useToast();
   const { t, lang } = useLanguage();
+  const { run, steps, handleEvent, startTour } = usePageTour('orders', TOUR_STEPS);
   const locale = lang === 'sr' ? 'sr-Latn-RS' : 'en-US';
   const location = useLocation();
   const navigate = useNavigate();
@@ -298,21 +326,24 @@ export function OrdersPage() {
 
   return (
     <>
+      <PageTour run={run} steps={steps} onEvent={handleEvent} />
       <PageHeader
         title={t('nav_orders')}
         subtitle={t('orders_subtitle')}
-        action={<AddButton onClick={openAdd} label={t('new_order')} />}
+        onTourStart={startTour}
+        action={<div data-tour="orders-add"><AddButton onClick={openAdd} label={t('new_order')} /></div>}
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isMobile ? '1 1 100%' : undefined }}>
           <input
+            data-tour="orders-search"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder={t('search_orders')}
             style={{ height: 40, width: isMobile ? '100%' : 220, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 14px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}
           />
-          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as StatusFilter); setQuery(q => ({ ...q, pageNumber: 1 })); }}
+          <select data-tour="orders-status-filter" value={statusFilter} onChange={e => { setStatusFilter(e.target.value as StatusFilter); setQuery(q => ({ ...q, pageNumber: 1 })); }}
             style={{ height: 40, borderRadius: 10, border: '1px solid #e4e4e7', padding: '0 12px', fontSize: 13.5, fontFamily: 'inherit', background: '#ffffff', color: '#18181b' }}>
             <option value="">{t('all_statuses')}</option>
             <option value="Pending">{t('status_pending')}</option>
@@ -335,13 +366,14 @@ export function OrdersPage() {
         </div>
       </div>
 
+      <div data-tour="orders-table">
       <TableCard>
         <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 22px', borderBottom: '1px solid #ececf0', background: '#fafafa', minWidth: isMobile ? 580 : undefined }}>
           {sortBtn(t('supplier'), 'supplierName')}
           {sortBtn(t('date'), 'orderDate')}
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('col_total')}</div>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{t('status')}</div>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
+          <div data-tour="orders-actions" style={{ fontSize: 11.5, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'right' }}>{t('actions')}</div>
         </div>
 
         {loading && <LoadingState />}
@@ -395,6 +427,7 @@ export function OrdersPage() {
           />
         )}
       </TableCard>
+      </div>
 
       <ConfirmModal
         open={!!confirmId}

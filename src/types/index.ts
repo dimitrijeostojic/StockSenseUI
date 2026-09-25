@@ -210,6 +210,7 @@ export interface UserDto {
 
 export interface GetMyUserResponse {
   roles: string[];
+  seenTourPages: string[];
   firstName: string;
   lastName: string;
   username: string;
